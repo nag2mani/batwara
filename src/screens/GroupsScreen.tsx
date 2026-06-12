@@ -39,6 +39,7 @@ export default function GroupsScreen() {
         <Text style={s.title}>Groups</Text>
         <TouchableOpacity style={s.addBtn} onPress={() => setCreateVisible(true)} activeOpacity={0.8}>
           <Ionicons name="add" size={20} color={C.bg} />
+          <Text style={s.addBtnText}>Create</Text>
         </TouchableOpacity>
       </View>
 
@@ -173,7 +174,8 @@ const s = StyleSheet.create({
   safe:            { flex: 1, backgroundColor: C.bg },
   header:          { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
   title:           { color: C.text, fontSize: 24, fontWeight: "700" },
-  addBtn:          { backgroundColor: C.green, borderRadius: 12, padding: 8 },
+  addBtn:          { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: C.green, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 9 },
+  addBtnText:      { color: C.bg, fontWeight: "700", fontSize: 14 },
   list:            { padding: 12, paddingBottom: 32 },
   row:             { gap: 12 },
   cardWrap:        { flex: 1 },

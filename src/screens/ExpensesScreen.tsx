@@ -39,6 +39,7 @@ export default function ExpensesScreen() {
         <Text style={s.title}>Expenses</Text>
         <TouchableOpacity style={s.addBtn} onPress={() => setAddVisible(true)} activeOpacity={0.8}>
           <Ionicons name="add" size={20} color={C.bg} />
+          <Text style={s.addBtnText}>Add</Text>
         </TouchableOpacity>
       </View>
 
@@ -101,7 +102,8 @@ const s = StyleSheet.create({
   safe:     { flex: 1, backgroundColor: C.bg },
   header:   { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
   title:    { color: C.text, fontSize: 24, fontWeight: "700" },
-  addBtn:   { backgroundColor: C.green, borderRadius: 12, padding: 8 },
+  addBtn:     { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: C.green, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 9 },
+  addBtnText: { color: C.bg, fontWeight: "700", fontSize: 14 },
   filters:  { paddingBottom: 8 },
   filterRow:{ paddingHorizontal: 16, gap: 8, flexDirection: "row", alignItems: "center" },
   chip:     { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: C.border, backgroundColor: C.card },

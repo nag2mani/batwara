@@ -1,10 +1,11 @@
 import "react-native-gesture-handler";
-import React from "react";
-import { ActivityIndicator, View, StyleSheet } from "react-native";
+import React, { useEffect } from "react";
+import { ActivityIndicator, View, StyleSheet, StatusBar } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { NavigationContainer } from "@react-navigation/native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
-import { StatusBar } from "expo-status-bar";
+import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-context";
+import * as Font from "expo-font";
+import { Ionicons } from "@expo/vector-icons";
 import { AuthProvider, useAuth } from "./src/auth/AuthContext";
 import { StoreProvider } from "./src/store/StoreContext";
 import AppNavigator from "./src/navigation/AppNavigator";
@@ -37,10 +38,16 @@ function Root() {
 }
 
 export default function App() {
+  useEffect(() => {
+    // Load Ionicons font in background — does not block render.
+    // Icons appear as soon as the font is ready (~1 frame after mount).
+    Font.loadAsync(Ionicons.font).catch(() => {});
+  }, []);
+
   return (
     <GestureHandlerRootView style={s.fill}>
-      <SafeAreaProvider>
-        <StatusBar style="light" />
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+        <StatusBar backgroundColor={C.bg} barStyle="light-content" translucent={false} />
         <AuthProvider>
           <Root />
         </AuthProvider>
