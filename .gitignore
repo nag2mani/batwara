@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Environment variables (never commit secrets)
+.env
+.env.local
+.env.*.local
+
+# EAS
+.easignore
+
+# Native build artifacts
+android/
+ios/
+*.apk
+*.aab
+*.ipa
+
+# Metro bundler cache
+.metro-health-check*
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# TypeScript
+*.tsbuildinfo

@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "Batwara",
+    "slug": "batwara-rn",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.indihood.batwara"
+    },
+    "android": {
+      "package": "com.indihood.batwara",
+      "versionCode": 1,
+      "permissions": [
+        "INTERNET"
+      ]
+    },
+    "newArchEnabled": true,
+    "plugins": [
+      "expo-font",
+      "expo-asset"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "2a79533b-2b8d-48ed-a02b-ed221f7a47a1"
+      }
+    }
+  }
+}
