@@ -39,7 +39,7 @@ export default function AuthScreen() {
     <LinearGradient colors={[C.bg, C.bg2, C.bg3]} style={s.fill}>
       <KeyboardAvoidingView
         style={s.fill}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
           <View style={s.logoWrap}>
