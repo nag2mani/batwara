@@ -3,7 +3,7 @@ import {
   Modal, View, Text, TextInput, TouchableOpacity, ScrollView,
   StyleSheet, KeyboardAvoidingView, Platform, Switch,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "./Icon";
 import type { Category, SplitMethod } from "../lib/types";
 import { CATEGORIES, CATEGORY_META } from "../lib/types";
 import { resolveSplits, validateSplits } from "../lib/splitwise";

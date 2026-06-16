@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
-  Modal, ScrollView,
+  Modal, ScrollView, Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "../components/Icon";
 import type { Group } from "../lib/types";
-import { computeBalances, simplifyDebts } from "../lib/splitwise";
+import { computePairwiseBalances } from "../lib/splitwise";
 import { useStore } from "../store/StoreContext";
 import { formatMoney } from "../lib/utils";
 import GroupCard from "../components/GroupCard";
@@ -15,10 +15,29 @@ import AddExpenseModal from "../components/AddExpenseModal";
 import SettleUpModal from "../components/SettleUpModal";
 import ExpenseRow from "../components/ExpenseRow";
 import Avatar from "../components/Avatar";
+import AddFab from "../components/AddFab";
 import { C } from "../theme/colors";
 
 export default function GroupsScreen() {
-  const { data, memberById } = useStore();
+  const { data, memberById, meId, dispatch } = useStore();
+
+  function confirmDeleteGroup(group: Group) {
+    Alert.alert(
+      "Delete group",
+      `Delete "${group.name}" and all its expenses? This cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            dispatch({ type: "DELETE_GROUP", id: group.id });
+            setDetailGroup(null);
+          },
+        },
+      ],
+    );
+  }
   const [createVisible, setCreateVisible] = useState(false);
   const [detailGroup,   setDetailGroup]   = useState<Group | null>(null);
   const [addVisible,    setAddVisible]    = useState(false);
@@ -28,19 +47,18 @@ export default function GroupsScreen() {
     ? data.expenses.filter((e) => e.groupId === detailGroup.id)
     : [];
 
-  const detailBalances = detailGroup
-    ? computeBalances(data.expenses, data.settlements, detailGroup.id)
-    : new Map<string, number>();
-  const detailDebts = simplifyDebts(detailBalances);
+  // Your direct balance with each other member of this group.
+  const myGroupDebts = detailGroup
+    ? [...computePairwiseBalances(data.expenses, data.settlements, meId, detailGroup.id).entries()]
+        .filter(([, amt]) => Math.abs(amt) > 0.005)
+        .map(([otherId, amt]) => ({ otherId, amount: Math.abs(amt), theyOweMe: amt > 0 }))
+        .sort((a, b) => b.amount - a.amount)
+    : [];
 
   return (
     <SafeAreaView style={s.safe}>
       <View style={s.header}>
         <Text style={s.title}>Groups</Text>
-        <TouchableOpacity style={s.addBtn} onPress={() => setCreateVisible(true)} activeOpacity={0.8}>
-          <Ionicons name="add" size={20} color={C.bg} />
-          <Text style={s.addBtnText}>Create</Text>
-        </TouchableOpacity>
       </View>
 
       {data.groups.length === 0 ? (
@@ -67,6 +85,8 @@ export default function GroupsScreen() {
         />
       )}
 
+      <AddFab onPress={() => setCreateVisible(true)} />
+
       {/* Group detail modal */}
       {detailGroup && (
         <Modal
@@ -81,9 +101,14 @@ export default function GroupsScreen() {
                 <Text style={s.detailEmoji}>{detailGroup.emoji}</Text>
                 <Text style={s.detailName}>{detailGroup.name}</Text>
               </View>
-              <TouchableOpacity onPress={() => setDetailGroup(null)}>
-                <Ionicons name="close" size={24} color={C.textMid} />
-              </TouchableOpacity>
+              <View style={s.detailActions}>
+                <TouchableOpacity onPress={() => confirmDeleteGroup(detailGroup)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Ionicons name="trash-outline" size={22} color={C.red} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setDetailGroup(null)}>
+                  <Ionicons name="close" size={24} color={C.textMid} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -102,29 +127,30 @@ export default function GroupsScreen() {
                 })}
               </ScrollView>
 
-              {/* Debts */}
+              {/* Your balances */}
               <View style={s.sectionRow}>
-                <Text style={s.sectionLabel}>Simplified debts</Text>
+                <Text style={s.sectionLabel}>Your balances</Text>
                 <TouchableOpacity style={s.settleBtn} onPress={() => setSettleVisible(true)}>
                   <Text style={s.settleBtnText}>Settle up</Text>
                 </TouchableOpacity>
               </View>
-              {detailDebts.length === 0 ? (
+              {myGroupDebts.length === 0 ? (
                 <Text style={s.allSettled}>🎉 All settled!</Text>
               ) : (
-                detailDebts.map((d, i) => {
-                  const from = memberById.get(d.from);
-                  const to   = memberById.get(d.to);
-                  if (!from || !to) return null;
+                myGroupDebts.map((d) => {
+                  const other = memberById.get(d.otherId);
+                  if (!other) return null;
                   return (
-                    <View key={i} style={s.debtRow}>
-                      <Avatar name={from.name} color={from.color} size="sm" />
+                    <View key={d.otherId} style={s.debtRow}>
+                      <Avatar name={other.name} color={other.color} size="sm" />
                       <Text style={s.debtText}>
-                        <Text style={{ color: from.color }}>{from.name}</Text>
-                        {" owes "}
-                        <Text style={{ color: to.color }}>{to.name}</Text>
+                        {d.theyOweMe ? "" : "You owe "}
+                        <Text style={{ color: other.color }}>{other.name}</Text>
+                        {d.theyOweMe ? " owes you" : ""}
                       </Text>
-                      <Text style={s.debtAmount}>{formatMoney(d.amount)}</Text>
+                      <Text style={[s.debtAmount, { color: d.theyOweMe ? C.green : C.red }]}>
+                        {formatMoney(d.amount)}
+                      </Text>
                     </View>
                   );
                 })
@@ -174,9 +200,7 @@ const s = StyleSheet.create({
   safe:            { flex: 1, backgroundColor: C.bg },
   header:          { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
   title:           { color: C.text, fontSize: 24, fontWeight: "700" },
-  addBtn:          { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: C.green, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 9 },
-  addBtnText:      { color: C.bg, fontWeight: "700", fontSize: 14 },
-  list:            { padding: 12, paddingBottom: 32 },
+  list:            { padding: 12, paddingBottom: 96 },
   row:             { gap: 12 },
   cardWrap:        { flex: 1 },
   empty:           { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
@@ -187,7 +211,8 @@ const s = StyleSheet.create({
   // Detail modal
   detailContainer: { flex: 1, backgroundColor: C.bg, padding: 20 },
   detailHeader:    { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
-  detailTitle:     { flexDirection: "row", alignItems: "center", gap: 10 },
+  detailTitle:     { flexDirection: "row", alignItems: "center", gap: 10, flex: 1 },
+  detailActions:   { flexDirection: "row", alignItems: "center", gap: 18 },
   detailEmoji:     { fontSize: 28 },
   detailName:      { color: C.text, fontSize: 22, fontWeight: "700" },
   sectionLabel:    { color: C.textMid, fontSize: 13, fontWeight: "500", marginBottom: 10, marginTop: 20 },

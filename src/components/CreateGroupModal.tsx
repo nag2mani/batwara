@@ -3,7 +3,7 @@ import {
   Modal, View, Text, TextInput, TouchableOpacity,
   ScrollView, StyleSheet, ActivityIndicator,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "./Icon";
 import { useStore } from "../store/StoreContext";
 import { useAuth } from "../auth/AuthContext";
 import { uid, todayISO } from "../lib/utils";

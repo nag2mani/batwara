@@ -1,6 +1,6 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "../components/Icon";
 import DashboardScreen from "../screens/DashboardScreen";
 import ExpensesScreen from "../screens/ExpensesScreen";
 import GroupsScreen from "../screens/GroupsScreen";

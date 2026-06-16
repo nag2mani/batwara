@@ -2,46 +2,62 @@
 
 > "You have to spend money to make money."
 
-**Batwara** is a personal and group expense tracker built with React Native (Expo). Track what you spend, split bills with friends, simplify group debts, and settle up — all in one app. Installable as an Android APK.
+**Batwara** is a personal and group expense tracker built with React Native (Expo). Track what you spend, split bills with friends, simplify group debts, import your existing Splitwise history, and settle up — all in one app. Installable as an Android APK.
 
 ---
 
 ## Features
 
 ### Dashboard
-- **Group expenses this month** — total of all group expenses in the current month
-- **Personal expenses this month** — total of all personal expenses in the current month
-- **Net balance** — how much you are owed or owe across all groups, with a Settle Up shortcut
+- **Date range picker** (top-right) — view your data over **Last 7 days**, **Last 30 days**, **Last year**, **All time**, or a **custom date range**. Totals and the chart update to match the selected range.
+- **Group total** and **Personal total** for the selected range
+- **Your net balance** — your overall position across **all groups combined**, shown from *your* perspective:
+  - a clear per-person breakdown — **"You owe Animesh ₹4,199.19"**, **"Shadab owes you ₹2,293.32"**
+  - a Settle Up shortcut
 - **Spending by category** — pie chart breakdown (Grocery, Rent, Dining, Entertainment, Utilities, Others)
-- **Recent activity** — last 5 expenses at a glance
+- **Recent activity** — latest expenses at a glance
+- **Floating "+" button** — quick-add an expense from anywhere on the screen
 
-### Personal Expenses
+### Expenses
 - Add expenses with description, amount, category, and date
 - Full expense list with category icons and color coding
-- Filter and browse all past personal transactions
+- Filter by **type** (all / personal / group) and by **category**
+- **Tap any expense** to open a detail view — amount, category, date, group, who paid, split method, and the full per-person split breakdown
+- **Delete** an expense from the row (red trash icon) or from the detail view
+- Floating "+" button to add a new expense
 
 ### Groups
-- Create groups with a name and emoji
+- Create groups with a name and emoji (floating "+" button)
 - **Add only registered users** — search by name or email; no free-text members
-- Each member sees expenses from their own perspective (who paid, who owes whom)
-- Group expense detail: member list, simplified debt graph, expense history
+- **Your balances** — the group detail shows debts from *your* perspective only (who owes you / whom you owe within that group)
+- Group detail: member list, your balances, expense history, and a **Settle Up** action
+- **Delete a group** (and all its expenses) from the group detail header
 
 ### Bill Splitting
 - **Equal split** — divide the bill evenly among all participants
 - **Exact split** — enter a specific amount per person
 - **Percentage split** — assign a percentage share to each person
 
-### Debt Simplification
-- Automatically simplifies complex multi-person debts into the minimum number of transactions (Splitwise-style algorithm)
+### Import from Splitwise
+- Import a group's full history directly from a **Splitwise CSV export** (Settings → Import from Splitwise)
+- Robust CSV parsing — detects columns by header name, so it works whether or not the export includes a `Currency` column
+- Maps each Splitwise balance row to a proper expense: the person with the positive balance is the **payer**, others owe their share, and a `0` means that person wasn't part of the split
+- **"Which member are you?"** selector — links your column to your account (auto-detected by email) so balances compute from your perspective
+- Auto-creates the group, members, and every expense in one tap
+
+### Debt Simplification & Pairwise Balances
+- **Pairwise balances** power the dashboard and group views — your direct, per-person position (who owes you / whom you owe)
+- A **Splitwise-style simplification** algorithm is also available to collapse complex multi-person debts into the minimum number of transactions
 
 ### Settle Up
 - Record a payment from one member to another
-- Settlements are reflected immediately in the debt graph
+- Settlements are reflected immediately in everyone's balances
 
 ### Settings
-- Profile card with name and email
+- Clean, sectioned layout: **Profile**, **Your activity**, **Data**, **About**, **Account**
 - Usage stats: total expenses, groups, and total amount tracked
-- App info (backend, platform, version)
+- Import from Splitwise
+- Developer links (GitHub / LinkedIn) and app version
 - Sign out
 
 ### Dual Mode
@@ -56,13 +72,16 @@
 
 | Layer | Technology |
 |---|---|
-| Framework | React Native 0.76.9 via Expo SDK 52 |
+| Framework | React Native 0.76.9 via Expo SDK 52 (New Architecture enabled) |
 | Language | TypeScript |
 | Navigation | React Navigation v6 (bottom tabs + native stack) |
 | Backend | Supabase (PostgreSQL + Auth + RLS) |
 | Local storage | AsyncStorage |
 | Charts | react-native-chart-kit + react-native-svg |
-| Build | EAS Build (Expo Application Services) |
+| Icons | Custom `Ionicons` renderer (draws glyphs directly from the bundled font) |
+| Build | Local Gradle (`android/`) or EAS Build |
+
+> **Note on icons:** the app renders Ionicons via a small custom component (`src/components/Icon.tsx`) that draws the glyph directly through `fontFamily`, bypassing `expo-font`'s async load gate which was leaving icons blank in release builds.
 
 ---
 
@@ -147,7 +166,7 @@ A `SECURITY DEFINER` trigger on `auth.users` auto-creates a profile row on signu
 
 ## Setup & APK Build
 
-See [SETUP.md](./SETUP.md) for full instructions: local development, Supabase configuration, environment variables, and step-by-step APK build guide.
+See **[SETUP.md](./SETUP.md)** for full instructions: local development, Supabase configuration, environment variables, and both local-Gradle and EAS APK build guides.
 
 ---
 

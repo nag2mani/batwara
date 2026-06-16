@@ -14,6 +14,7 @@ type Action =
   | { type: "ADD_EXPENSE";   expense:    Expense }
   | { type: "DELETE_EXPENSE";id:         string }
   | { type: "ADD_GROUP";     group:      Group;  newMembers: Member[] }
+  | { type: "DELETE_GROUP";  id:         string }
   | { type: "ADD_SETTLEMENT";settlement: Settlement };
 
 function reducer(state: AppData, action: Action): AppData {
@@ -25,6 +26,12 @@ function reducer(state: AppData, action: Action): AppData {
       ...state,
       groups:  [action.group, ...state.groups],
       members: [...state.members, ...action.newMembers.filter(nm => !state.members.find(m => m.id === nm.id))],
+    };
+    case "DELETE_GROUP":   return {
+      ...state,
+      groups:      state.groups.filter(g => g.id !== action.id),
+      expenses:    state.expenses.filter(e => e.groupId !== action.id),
+      settlements: state.settlements.filter(s => s.groupId !== action.id),
     };
     case "ADD_SETTLEMENT": return { ...state, settlements: [action.settlement, ...state.settlements] };
     default:               return state;
@@ -262,6 +269,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           );
           break;
         }
+
+        case "DELETE_GROUP":
+          await supabase.from("settlements").delete().eq("group_id", action.id);
+          await supabase.from("expenses").delete().eq("group_id", action.id);
+          await supabase.from("group_members").delete().eq("group_id", action.id);
+          await supabase.from("groups").delete().eq("id", action.id);
+          break;
 
         case "ADD_SETTLEMENT":
           await supabase.from("settlements").insert({

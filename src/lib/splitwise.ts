@@ -62,6 +62,46 @@ export function simplifyDebts(balances: Map<string, number>): SimplifiedDebt[] {
   return result;
 }
 
+/**
+ * Direct, per-person balances between `meId` and every other member.
+ * Returns a map of otherMemberId → net amount:
+ *   positive  → that person owes you
+ *   negative  → you owe that person
+ * Unlike simplifyDebts (which globally minimises transactions and may reroute
+ * debt through third parties), this reflects the actual money owed between you
+ * and each individual.
+ */
+export function computePairwiseBalances(
+  expenses: Expense[],
+  settlements: Settlement[],
+  meId: string,
+  groupId?: string,
+): Map<string, number> {
+  const net = new Map<string, number>();
+  const add = (id: string, delta: number) =>
+    net.set(id, (net.get(id) ?? 0) + delta);
+
+  for (const e of expenses) {
+    if (e.type !== "group" || !e.paidBy || !e.splits) continue;
+    if (groupId && e.groupId !== groupId) continue;
+    const payer = e.paidBy;
+    for (const s of e.splits) {
+      if (s.memberId === payer) continue;            // payer's own share — no debt
+      if (payer === meId && s.memberId !== meId) add(s.memberId, s.amount);   // they owe you
+      else if (s.memberId === meId && payer !== meId) add(payer, -s.amount);  // you owe them
+    }
+  }
+
+  for (const st of settlements) {
+    if (groupId && st.groupId !== groupId) continue;
+    if (st.from === meId) add(st.to, st.amount);       // you paid them back
+    else if (st.to === meId) add(st.from, -st.amount); // they paid you back
+  }
+
+  for (const [id, v] of net) net.set(id, round2(v));
+  return net;
+}
+
 export function resolveSplits(
   method: SplitMethod,
   amount: number,

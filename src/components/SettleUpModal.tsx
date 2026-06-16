@@ -1,6 +1,6 @@
 import React from "react";
 import { Modal, View, Text, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "./Icon";
 import { computeBalances, simplifyDebts } from "../lib/splitwise";
 import { useStore } from "../store/StoreContext";
 import { formatMoney, todayISO, uid } from "../lib/utils";

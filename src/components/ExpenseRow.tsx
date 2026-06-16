@@ -4,8 +4,9 @@ import type { Expense } from "../lib/types";
 import { formatDate, formatMoney } from "../lib/utils";
 import { useStore } from "../store/StoreContext";
 import CategoryIcon from "./CategoryIcon";
+import ExpenseDetailModal from "./ExpenseDetailModal";
 import { C } from "../theme/colors";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "./Icon";
 
 interface Props {
   expense: Expense;
@@ -14,6 +15,13 @@ interface Props {
 export default function ExpenseRow({ expense }: Props) {
   const { dispatch, groupById } = useStore();
   const group = expense.groupId ? groupById.get(expense.groupId) : undefined;
+  const [detailVisible, setDetailVisible] = useState(false);
+
+  const tag = group
+    ? `${group.emoji} ${group.name}`
+    : expense.type === "personal"
+    ? "Personal"
+    : "Group";
 
   function confirmDelete() {
     Alert.alert("Delete expense", `Delete "${expense.description}"?`, [
@@ -23,21 +31,27 @@ export default function ExpenseRow({ expense }: Props) {
   }
 
   return (
-    <View style={s.row}>
-      <CategoryIcon category={expense.category} size={18} />
-      <View style={s.info}>
-        <Text style={s.desc} numberOfLines={1}>{expense.description}</Text>
-        <Text style={s.meta}>
-          {formatDate(expense.date)}{group ? `  ·  ${group.emoji} ${group.name}` : ""}
-        </Text>
-      </View>
-      <View style={s.right}>
-        <Text style={s.amount}>{formatMoney(expense.amount)}</Text>
-        <TouchableOpacity onPress={confirmDelete} style={s.del} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="trash-outline" size={15} color={C.textDim} />
-        </TouchableOpacity>
-      </View>
-    </View>
+    <>
+      <TouchableOpacity style={s.row} onPress={() => setDetailVisible(true)} activeOpacity={0.6}>
+        <CategoryIcon category={expense.category} size={18} />
+        <View style={s.info}>
+          <Text style={s.desc} numberOfLines={1}>{expense.description}</Text>
+          <Text style={s.meta}>{formatDate(expense.date)}{"  ·  "}{tag}</Text>
+        </View>
+        <View style={s.right}>
+          <Text style={s.amount}>{formatMoney(expense.amount)}</Text>
+          <TouchableOpacity onPress={confirmDelete} style={s.del} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="trash-outline" size={16} color={C.red} />
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+
+      <ExpenseDetailModal
+        expense={expense}
+        visible={detailVisible}
+        onClose={() => setDetailVisible(false)}
+      />
+    </>
   );
 }
 
