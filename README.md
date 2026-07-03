@@ -4,6 +4,28 @@
 
 **Batwara** is a personal and group expense tracker built with React Native (Expo). Track what you spend, split bills with friends, simplify group debts, import your existing Splitwise history, and settle up — all in one app. Installable as an Android APK.
 
+<table align="center">
+  <tr>
+    <td align="center">
+      <img src="https://github.com/user-attachments/assets/fe7c0940-570a-4e0a-a635-7478b036b581" width="180"><br>
+      <b>Home</b>
+    </td>
+    <td align="center">
+      <img src="https://github.com/user-attachments/assets/b40193d2-83a3-4bfc-b17f-406e83515894" width="180"><br>
+      <b>Recent Transactions</b>
+    </td>
+    <td align="center">
+      <img src="https://github.com/user-attachments/assets/6480f4b2-c0d5-4544-885b-3cad3626197e" width="180"><br>
+      <b>Expense Details</b>
+    </td>
+    <td align="center">
+      <img src="https://github.com/user-attachments/assets/251fc368-3992-4bc3-a7e9-3f3b26554644" width="180"><br>
+      <b>Groups</b>
+    </td>
+  </tr>
+</table>
+
+
 ---
 
 ## Features
