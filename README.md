@@ -1,7 +1,5 @@
 # Batwara 💸
 
-> "You have to spend money to make money."
-
 **Batwara** is a personal and group expense tracker built with React Native (Expo). Track what you spend, split bills with friends, simplify group debts, import your existing Splitwise history, and settle up — all in one app. Installable as an Android APK.
 
 <table align="center">
