@@ -4,22 +4,17 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "../components/Icon";
 import { useAuth } from "../auth/AuthContext";
 import { useStore } from "../store/StoreContext";
-import { formatMoney } from "../lib/utils";
 import { C } from "../theme/colors";
 import Avatar from "../components/Avatar";
 import SplitwiseImportModal from "../components/SplitwiseImportModal";
 
 export default function SettingsScreen() {
   const { user: authUser, signOut: authSignOut } = useAuth();
-  const { data, memberById, meId } = useStore();
+  const { memberById, meId } = useStore();
 
   const me = memberById.get(meId) ?? [...memberById.values()][0];
   const displayName = authUser?.displayName ?? "User";
   const [importVisible, setImportVisible] = useState(false);
-
-  const totalExpenses = data.expenses.length;
-  const totalGroups   = data.groups.length;
-  const totalSpent    = data.expenses.reduce((s, e) => s + e.amount, 0);
 
   function confirmSignOut() {
     Alert.alert("Sign out", "Are you sure?", [
@@ -40,27 +35,6 @@ export default function SettingsScreen() {
           <View style={s.profileInfo}>
             <Text style={s.profileName}>{displayName}</Text>
             <Text style={s.profileEmail}>{authUser?.isLocal ? "Local mode (no Supabase)" : authUser?.email}</Text>
-          </View>
-        </View>
-
-        {/* Activity */}
-        <View style={s.group}>
-          <Text style={s.sectionHeader}>Your activity</Text>
-          <View style={s.statsRow}>
-            <View style={s.stat}>
-              <Text style={s.statValue}>{totalExpenses}</Text>
-              <Text style={s.statLabel}>Expenses</Text>
-            </View>
-            <View style={s.statDivider} />
-            <View style={s.stat}>
-              <Text style={s.statValue}>{totalGroups}</Text>
-              <Text style={s.statLabel}>Groups</Text>
-            </View>
-            <View style={s.statDivider} />
-            <View style={s.stat}>
-              <Text style={s.statValue}>{formatMoney(totalSpent)}</Text>
-              <Text style={s.statLabel}>Total tracked</Text>
-            </View>
           </View>
         </View>
 
@@ -155,12 +129,6 @@ const s = StyleSheet.create({
   profileInfo:  { flex: 1, gap: 4 },
   profileName:  { color: C.text, fontSize: 18, fontWeight: "600" },
   profileEmail: { color: C.textMid, fontSize: 13 },
-
-  statsRow:     { flexDirection: "row", backgroundColor: C.card, borderRadius: 16, borderWidth: 1, borderColor: C.border, padding: 16 },
-  stat:         { flex: 1, alignItems: "center", gap: 4 },
-  statValue:    { color: C.text, fontSize: 18, fontWeight: "700" },
-  statLabel:    { color: C.textMid, fontSize: 12 },
-  statDivider:  { width: 1, backgroundColor: C.border },
 
   section:      { backgroundColor: C.card, borderRadius: 16, borderWidth: 1, borderColor: C.border, paddingHorizontal: 16 },
 

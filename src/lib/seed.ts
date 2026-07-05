@@ -43,10 +43,39 @@ export function buildSeedData(myName: string): AppData {
     { id: uid("s"), from: aarav.id, to: me.id, amount: 3600, date: daysAgoISO(35), groupId: goaTrip.id },
   ];
 
+  // Work ledger demo data (all in Flat 4B — 4 members → 3 eligible voters → 2 approvals needed)
+  const wDishes  = { id: uid("w"), groupId: flat4b.id, createdBy: priya.id, title: "Washed all the dishes",   description: "Cleared the sink after dinner.", category: "Cleaning"    as const, effort: "Easy"   as const, durationMinutes: 20, images: [] as string[], date: daysAgoISO(1), createdAt: daysAgoISO(1) };
+  const wCook    = { id: uid("w"), groupId: flat4b.id, createdBy: aarav.id, title: "Cooked dinner for everyone", description: "Rajma chawal for the flat.", category: "Cooking" as const, effort: "Hard"   as const, durationMinutes: 75, images: [] as string[], date: daysAgoISO(2), createdAt: daysAgoISO(2) };
+  const wGroc    = { id: uid("w"), groupId: flat4b.id, createdBy: me.id,    title: "Weekly grocery run",     description: "Restocked the kitchen.", category: "Shopping"    as const, effort: "Medium" as const, durationMinutes: 45, images: [] as string[], date: daysAgoISO(3), createdAt: daysAgoISO(3) };
+  const wLaundry = { id: uid("w"), groupId: flat4b.id, createdBy: rohan.id, title: "Did the shared laundry",  description: "", category: "Laundry" as const, effort: "Medium" as const, durationMinutes: 40, images: [] as string[], date: daysAgoISO(0), createdAt: daysAgoISO(0) };
+
+  const work = [wLaundry, wDishes, wGroc, wCook];
+
+  const workVotes = [
+    // Dishes → verified (2 approvals)
+    { id: uid("v"), workId: wDishes.id, userId: me.id,    vote: "approve" as const, createdAt: daysAgoISO(1) },
+    { id: uid("v"), workId: wDishes.id, userId: rohan.id, vote: "approve" as const, createdAt: daysAgoISO(1) },
+    // Cooking → verified (2 approvals)
+    { id: uid("v"), workId: wCook.id,   userId: me.id,    vote: "approve" as const, createdAt: daysAgoISO(2) },
+    { id: uid("v"), workId: wCook.id,   userId: priya.id, vote: "approve" as const, createdAt: daysAgoISO(2) },
+    // Grocery → 1 approval so far (still pending, needs 2)
+    { id: uid("v"), workId: wGroc.id,   userId: aarav.id, vote: "approve" as const, createdAt: daysAgoISO(3) },
+    // Laundry → no votes yet (pending)
+  ];
+
+  const workReactions = [
+    { id: uid("rx"), workId: wDishes.id, userId: aarav.id, emoji: "👏" as const, createdAt: daysAgoISO(1) },
+    { id: uid("rx"), workId: wCook.id,   userId: me.id,    emoji: "🔥" as const, createdAt: daysAgoISO(2) },
+    { id: uid("rx"), workId: wCook.id,   userId: priya.id, emoji: "🙌" as const, createdAt: daysAgoISO(2) },
+  ];
+
   return {
     members: [me, aarav, priya, rohan, sneha, kabir],
     groups: [flat4b, goaTrip, officeLunch],
     expenses,
     settlements,
+    work,
+    workVotes,
+    workReactions,
   };
 }

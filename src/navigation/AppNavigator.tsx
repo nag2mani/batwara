@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "../components/Icon";
 import DashboardScreen from "../screens/DashboardScreen";
 import ExpensesScreen from "../screens/ExpensesScreen";
+import WorkScreen from "../screens/WorkScreen";
 import GroupsScreen from "../screens/GroupsScreen";
 import SettingsScreen from "../screens/SettingsScreen";
 import { C } from "../theme/colors";
@@ -27,7 +28,8 @@ export default function AppNavigator() {
         tabBarIcon: ({ focused, color, size }) => {
           const icons: Record<string, [string, string]> = {
             Dashboard: ["grid",           "grid-outline"],
-            Expenses:  ["receipt",        "receipt-outline"],
+            Activity:  ["layers",         "layers-outline"],
+            Work:      ["construct",      "construct-outline"],
             Groups:    ["people",         "people-outline"],
             Settings:  ["person-circle",  "person-circle-outline"],
           };
@@ -37,7 +39,8 @@ export default function AppNavigator() {
       })}
     >
       <Tab.Screen name="Dashboard" component={DashboardScreen} />
-      <Tab.Screen name="Expenses"  component={ExpensesScreen} />
+      <Tab.Screen name="Activity"  component={ExpensesScreen} />
+      <Tab.Screen name="Work"      component={WorkScreen} />
       <Tab.Screen name="Groups"    component={GroupsScreen} />
       <Tab.Screen name="Settings"  component={SettingsScreen} />
     </Tab.Navigator>

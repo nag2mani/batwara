@@ -17,6 +17,9 @@
 DROP TRIGGER  IF EXISTS on_auth_user_created ON auth.users;
 DROP FUNCTION IF EXISTS handle_new_user();
 
+DROP TABLE IF EXISTS work_reactions CASCADE;
+DROP TABLE IF EXISTS work_votes     CASCADE;
+DROP TABLE IF EXISTS work_entries    CASCADE;
 DROP TABLE IF EXISTS settlements   CASCADE;
 DROP TABLE IF EXISTS expenses      CASCADE;
 DROP TABLE IF EXISTS group_members CASCADE;
@@ -250,3 +253,134 @@ CREATE POLICY "settlements: group members insert"
   WITH CHECK (
     group_id IN (SELECT group_id FROM group_members WHERE user_id = auth.uid())
   );
+
+
+-- ============================================================
+-- WORK LEDGER — household chore tracking
+--
+--   work_entries   : a logged chore, always tied to a group
+--   work_votes     : approve/reject validations (one per user per entry)
+--   work_reactions : 👏 ❤️ 🔥 🙌 on verified work
+--
+-- Status (pending / verified / rejected) is DERIVED on the client from the
+-- votes + group size, so it is intentionally NOT stored here.
+-- ============================================================
+
+CREATE TABLE work_entries (
+  id               text        PRIMARY KEY,
+  group_id         text        NOT NULL REFERENCES groups(id)     ON DELETE CASCADE,
+  created_by       uuid        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  title            text        NOT NULL,
+  description      text        NOT NULL DEFAULT '',
+  category         text        NOT NULL,
+  effort           text        NOT NULL CHECK (effort IN ('Easy', 'Medium', 'Hard')),
+  duration_minutes integer     NOT NULL DEFAULT 0 CHECK (duration_minutes >= 0),
+  images           jsonb       NOT NULL DEFAULT '[]'::jsonb,
+  date             timestamptz NOT NULL,
+  created_at       timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE work_entries ENABLE ROW LEVEL SECURITY;
+
+-- Visible to every member of the entry's group
+CREATE POLICY "work_entries: group members read"
+  ON work_entries FOR SELECT
+  USING (group_id IN (SELECT group_id FROM group_members WHERE user_id = auth.uid()));
+
+-- The submitter must be the creator AND a member of the group
+CREATE POLICY "work_entries: creator insert"
+  ON work_entries FOR INSERT
+  WITH CHECK (
+    created_by = auth.uid()
+    AND group_id IN (SELECT group_id FROM group_members WHERE user_id = auth.uid())
+  );
+
+CREATE POLICY "work_entries: creator delete"
+  ON work_entries FOR DELETE
+  USING (created_by = auth.uid());
+
+CREATE INDEX work_entries_group_id_idx   ON work_entries(group_id);
+CREATE INDEX work_entries_created_by_idx ON work_entries(created_by);
+CREATE INDEX work_entries_date_idx       ON work_entries(date DESC);
+
+
+CREATE TABLE work_votes (
+  id         text        PRIMARY KEY,
+  work_id    text        NOT NULL REFERENCES work_entries(id) ON DELETE CASCADE,
+  user_id    uuid        NOT NULL REFERENCES auth.users(id)   ON DELETE CASCADE,
+  vote       text        NOT NULL CHECK (vote IN ('approve', 'reject')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (work_id, user_id)   -- one vote per member per entry (enables upsert)
+);
+
+ALTER TABLE work_votes ENABLE ROW LEVEL SECURITY;
+
+-- Readable by anyone who can see the underlying work entry
+CREATE POLICY "work_votes: group members read"
+  ON work_votes FOR SELECT
+  USING (
+    work_id IN (
+      SELECT id FROM work_entries
+      WHERE group_id IN (SELECT group_id FROM group_members WHERE user_id = auth.uid())
+    )
+  );
+
+-- You may vote on a group-mate's entry, but NOT on your own
+CREATE POLICY "work_votes: eligible insert"
+  ON work_votes FOR INSERT
+  WITH CHECK (
+    user_id = auth.uid()
+    AND work_id IN (
+      SELECT id FROM work_entries
+      WHERE created_by <> auth.uid()
+        AND group_id IN (SELECT group_id FROM group_members WHERE user_id = auth.uid())
+    )
+  );
+
+CREATE POLICY "work_votes: own update"
+  ON work_votes FOR UPDATE
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "work_votes: own delete"
+  ON work_votes FOR DELETE
+  USING (user_id = auth.uid());
+
+CREATE INDEX work_votes_work_id_idx ON work_votes(work_id);
+
+
+CREATE TABLE work_reactions (
+  id         text        PRIMARY KEY,
+  work_id    text        NOT NULL REFERENCES work_entries(id) ON DELETE CASCADE,
+  user_id    uuid        NOT NULL REFERENCES auth.users(id)   ON DELETE CASCADE,
+  emoji      text        NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (work_id, user_id, emoji)
+);
+
+ALTER TABLE work_reactions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "work_reactions: group members read"
+  ON work_reactions FOR SELECT
+  USING (
+    work_id IN (
+      SELECT id FROM work_entries
+      WHERE group_id IN (SELECT group_id FROM group_members WHERE user_id = auth.uid())
+    )
+  );
+
+CREATE POLICY "work_reactions: member insert"
+  ON work_reactions FOR INSERT
+  WITH CHECK (
+    user_id = auth.uid()
+    AND work_id IN (
+      SELECT id FROM work_entries
+      WHERE group_id IN (SELECT group_id FROM group_members WHERE user_id = auth.uid())
+    )
+  );
+
+CREATE POLICY "work_reactions: own delete"
+  ON work_reactions FOR DELETE
+  USING (user_id = auth.uid());
+
+CREATE INDEX work_reactions_work_id_idx ON work_reactions(work_id);

@@ -7,12 +7,13 @@ import { PieChart } from "react-native-chart-kit";
 import { Ionicons } from "../components/Icon";
 import { computeBalances, computePairwiseBalances } from "../lib/splitwise";
 import { useStore } from "../store/StoreContext";
-import { formatMoney, monthLabel } from "../lib/utils";
-import { CATEGORY_META } from "../lib/types";
-import CategoryIcon from "../components/CategoryIcon";
+import { formatMoney } from "../lib/utils";
+import { CATEGORY_META, type Category } from "../lib/types";
 import ExpenseRow from "../components/ExpenseRow";
+import WorkRow from "../components/WorkRow";
 import SettleUpModal from "../components/SettleUpModal";
 import AddExpenseModal from "../components/AddExpenseModal";
+import CategoryBreakdownModal from "../components/CategoryBreakdownModal";
 import AddFab from "../components/AddFab";
 import DateRangePicker, { computeRange, type RangeKey, type DateRange } from "../components/DateRangePicker";
 import { C } from "../theme/colors";
@@ -23,6 +24,7 @@ export default function DashboardScreen() {
   const { data, memberById, meId } = useStore();
   const [settleVisible,  setSettleVisible]  = useState(false);
   const [addVisible,     setAddVisible]     = useState(false);
+  const [catVisible,     setCatVisible]     = useState(false);
   const [rangeKey,       setRangeKey]       = useState<RangeKey>("30d");
   const [range,          setRange]          = useState<DateRange>(() => computeRange("30d"));
 
@@ -55,12 +57,30 @@ export default function DashboardScreen() {
     .map(([cat, value]) => ({
       name: cat,
       population: value,
-      color: CATEGORY_META[cat as any]?.color ?? C.textMid,
+      color: CATEGORY_META[cat as Category]?.color ?? C.textMid,
       legendFontColor: C.textMid,
       legendFontSize: 12,
-    }));
+    }))
+    // Highest percentage first, so both the legend and the detail list are ordered.
+    .sort((a, b) => b.population - a.population);
 
-  const recentExpenses = ranged.slice(0, 5);
+  const rangedTotal = pieData.reduce((sum, d) => sum + d.population, 0);
+  const categoryRows = pieData.map((d) => ({
+    name:  d.name,
+    value: d.population,
+    color: d.color,
+    pct:   rangedTotal > 0 ? (d.population / rangedTotal) * 100 : 0,
+  }));
+
+  // Recent activity — group + personal expenses AND work logs, merged chronologically.
+  const recentFeed = [
+    ...ranged.map((e) => ({ kind: "expense" as const, id: e.id, date: e.date, expense: e })),
+    ...data.work
+      .filter((w) => inRange(w.date))
+      .map((w) => ({ kind: "work" as const, id: w.id, date: w.date, work: w })),
+  ]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 7);
 
   return (
     <SafeAreaView style={s.safe}>
@@ -69,7 +89,6 @@ export default function DashboardScreen() {
         <View style={s.pageHeader}>
           <View style={s.headerLeft}>
             <Text style={s.logoText}>✦ Batwara</Text>
-            <Text style={s.subtitle}>{monthLabel()}</Text>
           </View>
           <DateRangePicker
             rangeKey={rangeKey}
@@ -83,7 +102,7 @@ export default function DashboardScreen() {
           <View style={[s.card, s.halfCard]}>
             <View style={s.miniIconRow}>
               <Ionicons name="people-outline" size={15} color={C.green} />
-              <Text style={s.miniLabel}>Group</Text>
+              <Text style={s.miniLabel}>Group Expense</Text>
             </View>
             <Text style={s.miniAmount}>{formatMoney(groupRangeTotal)}</Text>
             <Text style={s.miniSub}>{range.label.toLowerCase()}</Text>
@@ -91,20 +110,21 @@ export default function DashboardScreen() {
           <View style={[s.card, s.halfCard]}>
             <View style={s.miniIconRow}>
               <Ionicons name="person-outline" size={15} color={C.amber} />
-              <Text style={[s.miniLabel, { color: C.amber }]}>Personal</Text>
+              <Text style={[s.miniLabel, { color: C.amber }]}>Personal Expense</Text>
             </View>
             <Text style={[s.miniAmount, { color: C.amber }]}>{formatMoney(personalRangeTotal)}</Text>
             <Text style={s.miniSub}>{range.label.toLowerCase()}</Text>
           </View>
         </View>
 
-        {/* Net balance card */}
-        <View style={s.card}>
+        {/* Net balance card — tap to settle up */}
+        <TouchableOpacity style={s.card} activeOpacity={0.7} onPress={() => setSettleVisible(true)}>
           <View style={s.cardRow}>
             <Text style={s.cardLabel}>Your net balance</Text>
-            <TouchableOpacity style={s.settleBtn} onPress={() => setSettleVisible(true)}>
-              <Text style={s.settleBtnText}>Settle up</Text>
-            </TouchableOpacity>
+            <View style={s.tapHint}>
+              <Text style={s.tapHintText}>Settle up</Text>
+              <Ionicons name="chevron-forward" size={15} color={C.textDim} />
+            </View>
           </View>
           <Text style={[s.balanceAmount, { color: myBalance >= 0 ? C.green : C.red }]}>
             {myBalance >= 0 ? "+" : ""}{formatMoney(myBalance)}
@@ -135,12 +155,18 @@ export default function DashboardScreen() {
               })}
             </View>
           )}
-        </View>
+        </TouchableOpacity>
 
         {/* Spending chart */}
         {pieData.length > 0 && (
-          <View style={s.card}>
-            <Text style={s.cardLabel}>By category</Text>
+          <TouchableOpacity style={s.card} activeOpacity={0.7} onPress={() => setCatVisible(true)}>
+            <View style={s.cardRow}>
+              <Text style={s.cardLabel}>By category</Text>
+              <View style={s.tapHint}>
+                <Text style={s.tapHintText}>Details</Text>
+                <Ionicons name="chevron-forward" size={15} color={C.textDim} />
+              </View>
+            </View>
             <PieChart
               data={pieData}
               width={width - 64}
@@ -154,17 +180,19 @@ export default function DashboardScreen() {
               paddingLeft="0"
               absolute={false}
             />
-          </View>
+          </TouchableOpacity>
         )}
 
         {/* Recent activity */}
         <View style={s.card}>
-          <Text style={s.cardLabel}>Recent activity</Text>
-          {recentExpenses.length === 0
-            ? <Text style={s.empty}>No expenses yet</Text>
-            : recentExpenses.map((e) => (
-                <React.Fragment key={e.id}>
-                  <ExpenseRow expense={e} />
+          <Text style={s.cardLabel}>Last 7 activities</Text>
+          {recentFeed.length === 0
+            ? <Text style={s.empty}>No activity yet</Text>
+            : recentFeed.map((item) => (
+                <React.Fragment key={item.id}>
+                  {item.kind === "expense"
+                    ? <ExpenseRow expense={item.expense} />
+                    : <WorkRow entry={item.work} />}
                   <View style={s.divider} />
                 </React.Fragment>
               ))
@@ -176,6 +204,13 @@ export default function DashboardScreen() {
 
       <SettleUpModal visible={settleVisible} onClose={() => setSettleVisible(false)} />
       <AddExpenseModal visible={addVisible} onClose={() => setAddVisible(false)} />
+      <CategoryBreakdownModal
+        visible={catVisible}
+        onClose={() => setCatVisible(false)}
+        rows={categoryRows}
+        total={rangedTotal}
+        rangeLabel={range.label}
+      />
     </SafeAreaView>
   );
 }
@@ -187,10 +222,11 @@ const s = StyleSheet.create({
   pageHeader:  { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 },
   headerLeft:  { flex: 1 },
   logoText:    { color: C.text, fontSize: 22, fontWeight: "700" },
-  subtitle:    { color: C.textMid, fontSize: 13, marginTop: 2 },
   card:        { backgroundColor: C.card, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: C.border },
   cardRow:     { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   cardLabel:   { color: C.textMid, fontSize: 13, fontWeight: "500", marginBottom: 8 },
+  tapHint:     { flexDirection: "row", alignItems: "center", gap: 2 },
+  tapHintText: { color: C.textDim, fontSize: 12, fontWeight: "500" },
   twoCol:      { flexDirection: "row", gap: 12 },
   halfCard:    { flex: 1, gap: 4 },
   miniIconRow: { flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 2 },
@@ -199,8 +235,6 @@ const s = StyleSheet.create({
   miniSub:     { color: C.textDim, fontSize: 11 },
   balanceAmount:{ fontSize: 28, fontWeight: "700", letterSpacing: -0.5 },
   balanceHint: { color: C.textDim, fontSize: 12, marginTop: 2 },
-  settleBtn:   { backgroundColor: C.green, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 7 },
-  settleBtnText:{ color: C.bg, fontWeight: "700", fontSize: 13 },
   debtList:    { marginTop: 12, gap: 8 },
   debtRow:     { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   debtLine:    { color: C.textMid, fontSize: 14, lineHeight: 20, flex: 1 },

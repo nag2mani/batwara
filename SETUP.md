@@ -64,10 +64,25 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 ## 4. Run the app locally
 
 ```bash
-npx expo start          # Metro bundler — press 'a' for Android emulator
+npx expo run:android    # RECOMMENDED — full native rebuild + install on device/emulator
 # or
-npm run android         # build + install the dev app on a connected device/emulator
+npx expo start          # Metro bundler (JS only) — press 'a' for Android emulator
 ```
+
+> **Use `npx expo run:android`, not `npm run android`, when icons look blank.**
+> The app renders icons from a bundled font (`android/app/src/main/assets/fonts/Ionicons.ttf`)
+> via `src/components/Icon.tsx`. That font is linked at **native build time**, so a JS-only
+> reload (`expo start` / `npm run android` fast refresh) won't pick it up. A full native
+> rebuild (`npx expo run:android`) is required after the font is added or after `expo prebuild`.
+>
+> If icons are still blank, confirm the font exists and re-copy it if missing:
+> ```bash
+> mkdir -p android/app/src/main/assets/fonts
+> cp node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf \
+>    android/app/src/main/assets/fonts/Ionicons.ttf
+> ```
+> Note: `expo prebuild` regenerates the `android/` folder and can drop this file, so re-run
+> the copy above if you ever prebuild.
 
 You can also scan the QR code with **Expo Go** on a physical device (note: features needing native modules require a dev/native build, not Expo Go).
 

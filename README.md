@@ -1,6 +1,6 @@
 # Batwara 💸
 
-**Batwara** is a personal and group expense tracker built with React Native (Expo). Track what you spend, split bills with friends, simplify group debts, import your existing Splitwise history, and settle up — all in one app. Installable as an Android APK.
+**Batwara** is a personal & group expense tracker **and household work ledger**, built with React Native (Expo). Track what you spend, split bills with friends, simplify group debts, import your existing Splitwise history, and settle up — then log and peer-validate household chores so everyone's contribution stays fair and visible. All in one app, installable as an Android APK.
 
 <table align="center">
   <tr>
@@ -34,17 +34,21 @@
 - **Your net balance** — your overall position across **all groups combined**, shown from *your* perspective:
   - a clear per-person breakdown — **"You owe Animesh ₹4,199.19"**, **"Shadab owes you ₹2,293.32"**
   - a Settle Up shortcut
-- **Spending by category** — pie chart breakdown (Grocery, Rent, Dining, Entertainment, Utilities, Others)
+- **Spending by category** — pie chart broken down by category (Grocery, Rent, Dining, Entertainment, Utilities, Others), **ordered highest percentage first**. Tap the card for a detailed sheet showing each category's **amount and exact percentage** with proportional bars.
 - **Recent activity** — latest expenses at a glance
 - **Floating "+" button** — quick-add an expense from anywhere on the screen
 
-### Expenses
-- Add expenses with description, amount, category, and date
-- Full expense list with category icons and color coding
-- Filter by **type** (all / personal / group) and by **category**
+### Activity
+The **Activity** tab is the unified record of everything logged, split into three filters:
+- **Group** — all group expenses
+- **Personal** — your personal expenses
+- **Work** — your own household work submissions (pending or verified)
+
+- Category icons and color coding throughout
 - **Tap any expense** to open a detail view — amount, category, date, group, who paid, split method, and the full per-person split breakdown
+- **Tap any work entry** to open its detail — validation progress, voters, effort points, photos, and reactions
+- **Context-aware "+" button** — adds an expense on the Group/Personal filters, or logs work on the Work filter
 - **Delete** an expense from the row (red trash icon) or from the detail view
-- Floating "+" button to add a new expense
 
 ### Groups
 - Create groups with a name and emoji (floating "+" button)
@@ -73,6 +77,25 @@
 - Record a payment from one member to another
 - Settlements are reflected immediately in everyone's balances
 
+### Work Ledger 🧹
+A full household-chore tracker with **peer validation**, so effort is credited fairly and disputes over "who does what" disappear. It has its own **Work** tab and also surfaces under **Activity → Work**.
+
+- **Log work** — title, description, category (Cleaning, Cooking, Shopping, Water, Laundry, Bills, Maintenance, Misc), effort level, duration, optional photo attachments, and date
+- **Peer validation** — every submission starts as **Pending**; group-mates (everyone except the submitter) **approve** or **reject** it:
+  - Marked **Verified** once approvals reach **50% of eligible voters, rounded up** — e.g. a 3-member group needs 1 approval, 4 members need 2, 6 members need 3
+  - Marked **Rejected** automatically once enough rejections make that threshold unreachable
+  - You can **never validate your own work**
+  - Each submission has a **48-hour validation window** with a live countdown
+- **Effort points** — Easy = 10, Medium = 20, Hard = 30, awarded on verification
+- **Contribution dashboard** — verified / pending / rejected counts, total contribution hours, and total effort points for the group
+- **Leaderboard** — ranks members by effort points and verified work across **Weekly**, **Monthly**, and **All-time** windows, with 🥇🥈🥉 for the top three
+- **Activity feed** — verified chores in chronological order; each card shows the submitter, task, category, duration, effort, approval count, and status
+- **Reactions** — cheer on good work with 👏 ❤️ 🔥 🙌
+- **Contribution profile** — tap any member to see their stats, category breakdown, and full submission history
+- **In-app reminders** — a badge and banner flag submissions that are waiting on *your* validation
+
+> Work status (Pending / Verified / Rejected) is **derived on the client** from the votes and group size — it is never stored, so it can't drift between devices or between local and cloud mode.
+
 ### Settings
 - Clean, sectioned layout: **Profile**, **Your activity**, **Data**, **About**, **Account**
 - Usage stats: total expenses, groups, and total amount tracked
@@ -94,7 +117,7 @@
 |---|---|
 | Framework | React Native 0.76.9 via Expo SDK 52 (New Architecture enabled) |
 | Language | TypeScript |
-| Navigation | React Navigation v6 (bottom tabs + native stack) |
+| Navigation | React Navigation v6 — five-tab bottom navigator (Dashboard · Activity · Work · Groups · Settings) |
 | Backend | Supabase (PostgreSQL + Auth + RLS) |
 | Local storage | AsyncStorage |
 | Charts | react-native-chart-kit + react-native-svg |
@@ -107,7 +130,9 @@
 
 ## Database Schema
 
-Run `supabase/setup.sql` in the Supabase SQL Editor to set up everything from scratch. Safe to re-run (drops and recreates all tables).
+Run `supabase/setup.sql` in the Supabase SQL Editor to set up everything from scratch. Safe to re-run — but note it **drops and recreates all tables**, wiping existing data.
+
+> **Already have data?** Run **`supabase/work_ledger_migration.sql`** instead. It additively creates only the three Work Ledger tables (`work_entries`, `work_votes`, `work_reactions`) and leaves your existing tables and data untouched.
 
 ### Tables
 
@@ -168,6 +193,47 @@ date       timestamptz    NOT NULL
 created_at timestamptz    NOT NULL DEFAULT now()
 ```
 
+#### `work_entries`
+A logged household chore, always tied to a group.
+
+```sql
+id               text        PRIMARY KEY
+group_id         text        NOT NULL REFERENCES groups(id) ON DELETE CASCADE
+created_by       uuid        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE
+title            text        NOT NULL
+description      text        NOT NULL DEFAULT ''
+category         text        NOT NULL  -- Cleaning | Cooking | Shopping | Water | Laundry | Bills | Maintenance | Misc
+effort           text        NOT NULL  CHECK (effort IN ('Easy','Medium','Hard'))
+duration_minutes integer     NOT NULL DEFAULT 0  CHECK (duration_minutes >= 0)
+images           jsonb       NOT NULL DEFAULT '[]'  -- attachment URIs
+date             timestamptz NOT NULL
+created_at       timestamptz NOT NULL DEFAULT now()
+```
+
+#### `work_votes`
+Approve / reject validations — one per member per entry.
+
+```sql
+id         text        PRIMARY KEY
+work_id    text        NOT NULL REFERENCES work_entries(id) ON DELETE CASCADE
+user_id    uuid        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE
+vote       text        NOT NULL  CHECK (vote IN ('approve','reject'))
+created_at timestamptz NOT NULL DEFAULT now()
+UNIQUE (work_id, user_id)  -- enables upsert on re-vote
+```
+
+#### `work_reactions`
+```sql
+id         text        PRIMARY KEY
+work_id    text        NOT NULL REFERENCES work_entries(id) ON DELETE CASCADE
+user_id    uuid        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE
+emoji      text        NOT NULL
+created_at timestamptz NOT NULL DEFAULT now()
+UNIQUE (work_id, user_id, emoji)
+```
+
+> Work **status is not stored** — it's derived on the client from the votes and group size (see [Work Ledger](#work-ledger-)).
+
 ### Row Level Security
 
 | Table | Policy |
@@ -177,6 +243,9 @@ created_at timestamptz    NOT NULL DEFAULT now()
 | `group_members` | Any signed-in user can read. Only group creator can add members. |
 | `expenses` | Personal → only creator. Group → all members of that group. |
 | `settlements` | Visible to `from_user`, `to_user`, or any group member. |
+| `work_entries` | Visible to all members of the entry's group. Only the creator (and a group member) can insert; only the creator can delete. |
+| `work_votes` | Readable by group members. You may vote on a group-mate's entry but **not your own**; you can update/delete only your own vote. |
+| `work_reactions` | Readable by group members. Members can add reactions and remove only their own. |
 
 ### Trigger
 

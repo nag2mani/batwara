@@ -51,6 +51,24 @@ export function daysAgoISO(days: number, hour = 12): string {
   return d.toISOString();
 }
 
+export function effortPointsLabel(points: number): string {
+  return `${points} pts`;
+}
+
+/** "1h 30m", "45m", "2h" — compact duration from minutes. */
+export function formatMinutes(mins: number): string {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+}
+
+/** Hours as a friendly decimal, e.g. 2.5. */
+export function minutesToHours(mins: number): number {
+  return Math.round((mins / 60) * 10) / 10;
+}
+
 export function initials(name: string): string {
   return name
     .split(/\s+/)

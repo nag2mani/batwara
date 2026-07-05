@@ -1,87 +1,87 @@
 import React, { useState } from "react";
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, FlatList,
+  View, Text, TouchableOpacity, StyleSheet, FlatList,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "../components/Icon";
-import type { Category } from "../lib/types";
-import { CATEGORIES, CATEGORY_META } from "../lib/types";
 import { useStore } from "../store/StoreContext";
+import { tallyWork } from "../lib/work";
 import ExpenseRow from "../components/ExpenseRow";
-import AddExpenseModal from "../components/AddExpenseModal";
-import AddFab from "../components/AddFab";
+import WorkCard from "../components/WorkCard";
 import { C } from "../theme/colors";
 
-type TypeFilter = "all" | "personal" | "group";
+type Filter = "group" | "personal" | "work";
+
+const FILTERS: { key: Filter; label: string; icon: string }[] = [
+  { key: "group",    label: "Group",    icon: "people-outline" },
+  { key: "personal", label: "Personal", icon: "person-outline" },
+  { key: "work",     label: "Work",     icon: "construct-outline" },
+];
 
 export default function ExpensesScreen() {
-  const { data } = useStore();
-  const [addVisible,      setAddVisible]      = useState(false);
-  const [typeFilter,      setTypeFilter]      = useState<TypeFilter>("all");
-  const [categoryFilters, setCategoryFilters] = useState<Set<Category>>(new Set());
+  const { data, groupById, meId } = useStore();
+  const [filter, setFilter] = useState<Filter>("group");
 
-  function toggleCategory(cat: Category) {
-    setCategoryFilters((prev) => {
-      const next = new Set(prev);
-      next.has(cat) ? next.delete(cat) : next.add(cat);
-      return next;
-    });
-  }
+  const isWork = filter === "work";
 
-  const filtered = data.expenses.filter((e) => {
-    if (typeFilter !== "all" && e.type !== typeFilter) return false;
-    if (categoryFilters.size > 0 && !categoryFilters.has(e.category)) return false;
-    return true;
-  });
+  const filteredExpenses = data.expenses.filter((e) => e.type === filter);
+
+  // Work created by the current user that is still pending or has been verified
+  // (rejected submissions are hidden here).
+  const myWork = data.work
+    .filter((w) =>
+      w.createdBy === meId
+      && tallyWork(w, data.workVotes, groupById.get(w.groupId)).status !== "rejected",
+    )
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
     <SafeAreaView style={s.safe}>
       <View style={s.header}>
-        <Text style={s.title}>Expenses</Text>
+        <Text style={s.title}>Activity</Text>
       </View>
 
-      {/* Filters */}
-      <View style={s.filters}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterRow}>
-          {/* Type chips */}
-          {(["all", "personal", "group"] as TypeFilter[]).map((t) => (
+      {/* Segmented filter: Group / Personal / Work */}
+      <View style={s.segment}>
+        {FILTERS.map((f) => {
+          const active = filter === f.key;
+          return (
             <TouchableOpacity
-              key={t}
-              style={[s.chip, typeFilter === t && s.chipActive]}
-              onPress={() => setTypeFilter(t)}
+              key={f.key}
+              style={[s.segBtn, active && s.segBtnActive]}
+              onPress={() => setFilter(f.key)}
             >
-              <Text style={[s.chipText, typeFilter === t && { color: C.green }]}>{t}</Text>
+              <Ionicons name={f.icon as any} size={16} color={active ? C.green : C.textMid} />
+              <Text style={[s.segText, active && { color: C.green }]}>{f.label}</Text>
             </TouchableOpacity>
-          ))}
-
-          <View style={s.dividerV} />
-
-          {/* Category chips */}
-          {CATEGORIES.map((cat) => {
-            const active = categoryFilters.has(cat);
-            const meta   = CATEGORY_META[cat];
-            return (
-              <TouchableOpacity
-                key={cat}
-                style={[s.chip, active && { borderColor: meta.color, backgroundColor: meta.soft }]}
-                onPress={() => toggleCategory(cat)}
-              >
-                <Text style={[s.chipText, active && { color: meta.color }]}>{cat}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+          );
+        })}
       </View>
 
       {/* List */}
-      {filtered.length === 0 ? (
+      {isWork ? (
+        myWork.length === 0 ? (
+          <View style={s.empty}>
+            <Ionicons name="construct-outline" size={48} color={C.textDim} />
+            <Text style={s.emptyText}>No work yet</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={myWork}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => <WorkCard entry={item} />}
+            contentContainerStyle={s.workList}
+            showsVerticalScrollIndicator={false}
+          />
+        )
+      ) : filteredExpenses.length === 0 ? (
         <View style={s.empty}>
           <Ionicons name="receipt-outline" size={48} color={C.textDim} />
-          <Text style={s.emptyText}>No expenses</Text>
+          <Text style={s.emptyText}>No {filter} expenses</Text>
         </View>
       ) : (
         <FlatList
-          data={filtered}
+          data={filteredExpenses}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => <ExpenseRow expense={item} />}
           ItemSeparatorComponent={() => <View style={s.sep} />}
@@ -89,26 +89,21 @@ export default function ExpensesScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
-
-      <AddFab onPress={() => setAddVisible(true)} />
-
-      <AddExpenseModal visible={addVisible} onClose={() => setAddVisible(false)} />
     </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
-  safe:     { flex: 1, backgroundColor: C.bg },
-  header:   { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
-  title:    { color: C.text, fontSize: 24, fontWeight: "700" },
-  filters:  { paddingBottom: 8 },
-  filterRow:{ paddingHorizontal: 16, gap: 8, flexDirection: "row", alignItems: "center" },
-  chip:     { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: C.border, backgroundColor: C.card },
-  chipActive:{ borderColor: C.green, backgroundColor: C.green + "1a" },
-  chipText: { color: C.textMid, fontSize: 13, fontWeight: "500", textTransform: "capitalize" },
-  dividerV: { width: 1, height: 24, backgroundColor: C.border, marginHorizontal: 4 },
-  list:     { paddingHorizontal: 16, paddingBottom: 96 },
-  sep:      { height: 1, backgroundColor: C.border },
-  empty:    { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
-  emptyText:{ color: C.textMid, fontSize: 16 },
+  safe:        { flex: 1, backgroundColor: C.bg },
+  header:      { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
+  title:       { color: C.text, fontSize: 24, fontWeight: "700" },
+  segment:     { flexDirection: "row", backgroundColor: C.card, borderRadius: 12, padding: 4, borderWidth: 1, borderColor: C.border, marginHorizontal: 16, marginTop: 8, marginBottom: 12 },
+  segBtn:      { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10, borderRadius: 9 },
+  segBtnActive:{ backgroundColor: C.green + "1a" },
+  segText:     { color: C.textMid, fontSize: 13, fontWeight: "600" },
+  list:        { paddingHorizontal: 16, paddingBottom: 96 },
+  workList:    { paddingHorizontal: 16, paddingBottom: 96, gap: 10 },
+  sep:         { height: 1, backgroundColor: C.border },
+  empty:       { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
+  emptyText:   { color: C.textMid, fontSize: 16 },
 });

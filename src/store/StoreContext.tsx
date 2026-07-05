@@ -2,7 +2,9 @@ import React, {
   createContext, useCallback, useContext, useEffect, useReducer,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { AppData, Expense, Group, Member, Settlement } from "../lib/types";
+import type {
+  AppData, Expense, Group, Member, Settlement, WorkEntry, WorkReaction, WorkVote,
+} from "../lib/types";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { useAuth } from "../auth/AuthContext";
 
@@ -15,7 +17,13 @@ type Action =
   | { type: "DELETE_EXPENSE";id:         string }
   | { type: "ADD_GROUP";     group:      Group;  newMembers: Member[] }
   | { type: "DELETE_GROUP";  id:         string }
-  | { type: "ADD_SETTLEMENT";settlement: Settlement };
+  | { type: "ADD_SETTLEMENT";settlement: Settlement }
+  | { type: "ADD_WORK";      entry:      WorkEntry }
+  | { type: "DELETE_WORK";   id:         string }
+  | { type: "SET_VOTE";      vote:       WorkVote }                       // replaces this user's vote on this work
+  | { type: "RETRACT_VOTE";  workId:     string; userId: string }
+  | { type: "ADD_REACTION";  reaction:   WorkReaction }
+  | { type: "REMOVE_REACTION"; workId:   string; userId: string; emoji: string };
 
 function reducer(state: AppData, action: Action): AppData {
   switch (action.type) {
@@ -29,13 +37,52 @@ function reducer(state: AppData, action: Action): AppData {
     };
     case "DELETE_GROUP":   return {
       ...state,
-      groups:      state.groups.filter(g => g.id !== action.id),
-      expenses:    state.expenses.filter(e => e.groupId !== action.id),
-      settlements: state.settlements.filter(s => s.groupId !== action.id),
+      groups:        state.groups.filter(g => g.id !== action.id),
+      expenses:      state.expenses.filter(e => e.groupId !== action.id),
+      settlements:   state.settlements.filter(s => s.groupId !== action.id),
+      work:          state.work.filter(w => w.groupId !== action.id),
+      workVotes:     state.workVotes.filter(v => !state.work.find(w => w.id === v.workId && w.groupId === action.id)),
+      workReactions: state.workReactions.filter(r => !state.work.find(w => w.id === r.workId && w.groupId === action.id)),
     };
     case "ADD_SETTLEMENT": return { ...state, settlements: [action.settlement, ...state.settlements] };
+
+    case "ADD_WORK":       return { ...state, work: [action.entry, ...state.work] };
+    case "DELETE_WORK":    return {
+      ...state,
+      work:          state.work.filter(w => w.id !== action.id),
+      workVotes:     state.workVotes.filter(v => v.workId !== action.id),
+      workReactions: state.workReactions.filter(r => r.workId !== action.id),
+    };
+    case "SET_VOTE":       return {
+      ...state,
+      workVotes: [
+        ...state.workVotes.filter(v => !(v.workId === action.vote.workId && v.userId === action.vote.userId)),
+        action.vote,
+      ],
+    };
+    case "RETRACT_VOTE":   return {
+      ...state,
+      workVotes: state.workVotes.filter(v => !(v.workId === action.workId && v.userId === action.userId)),
+    };
+    case "ADD_REACTION":   return { ...state, workReactions: [...state.workReactions, action.reaction] };
+    case "REMOVE_REACTION":return {
+      ...state,
+      workReactions: state.workReactions.filter(
+        r => !(r.workId === action.workId && r.userId === action.userId && r.emoji === action.emoji),
+      ),
+    };
     default:               return state;
   }
+}
+
+/** Backfill work arrays on data loaded before the Work Ledger existed. */
+function normalize(data: AppData): AppData {
+  return {
+    ...data,
+    work:          data.work          ?? [],
+    workVotes:     data.workVotes     ?? [],
+    workReactions: data.workReactions ?? [],
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -51,7 +98,7 @@ interface StoreCtx {
 }
 
 const Ctx = createContext<StoreCtx | null>(null);
-const EMPTY: AppData = { members: [], groups: [], expenses: [], settlements: [] };
+const EMPTY: AppData = { members: [], groups: [], expenses: [], settlements: [], work: [], workVotes: [], workReactions: [] };
 
 // ---------------------------------------------------------------------------
 // Local storage (offline / no-Supabase mode)
@@ -148,11 +195,29 @@ async function loadFromSupabase(userId: string): Promise<AppData | null> {
       ? await supabase.from("settlements").select("*").in("group_id", groupIds)
       : { data: [] };
 
+    // 6. Work ledger — entries for my groups, plus their votes & reactions
+    const { data: workRows } = groupIds.length > 0
+      ? await supabase.from("work_entries").select("*").in("group_id", groupIds).order("date", { ascending: false })
+      : { data: [] };
+
+    const workIds = (workRows ?? []).map((w: any) => w.id);
+    const [voteRes, reactionRes] = await Promise.all([
+      workIds.length > 0
+        ? supabase.from("work_votes").select("*").in("work_id", workIds)
+        : Promise.resolve({ data: [] }),
+      workIds.length > 0
+        ? supabase.from("work_reactions").select("*").in("work_id", workIds)
+        : Promise.resolve({ data: [] }),
+    ]);
+
     return {
-      members:     Array.from(memberMap.values()),
+      members:       Array.from(memberMap.values()),
       groups,
       expenses,
-      settlements: (settlementRows ?? []).map(dbToSettlement),
+      settlements:   (settlementRows ?? []).map(dbToSettlement),
+      work:          (workRows ?? []).map(dbToWork),
+      workVotes:     (voteRes.data ?? []).map(dbToVote),
+      workReactions: (reactionRes.data ?? []).map(dbToReaction),
     };
   } catch (e) {
     console.error("[store] loadFromSupabase:", e);
@@ -176,6 +241,20 @@ function dbToSettlement(row: any): Settlement {
     id: row.id, from: row.from_user, to: row.to_user,
     amount: Number(row.amount), date: row.date, groupId: row.group_id ?? undefined,
   };
+}
+function dbToWork(row: any): WorkEntry {
+  return {
+    id: row.id, groupId: row.group_id, createdBy: row.created_by,
+    title: row.title, description: row.description ?? "", category: row.category,
+    effort: row.effort, durationMinutes: Number(row.duration_minutes) || 0,
+    images: row.images ?? [], date: row.date, createdAt: row.created_at,
+  };
+}
+function dbToVote(row: any): WorkVote {
+  return { id: row.id, workId: row.work_id, userId: row.user_id, vote: row.vote, createdAt: row.created_at };
+}
+function dbToReaction(row: any): WorkReaction {
+  return { id: row.id, workId: row.work_id, userId: row.user_id, emoji: row.emoji, createdAt: row.created_at };
 }
 
 // ---------------------------------------------------------------------------
@@ -206,11 +285,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       // First login: start empty, just add self as a member
       if (!loaded || loaded.members.length === 0) {
         const me: Member = { id: user.id, name: user.displayName, color: "#34d399" };
-        loaded = { members: [me], groups: [], expenses: [], settlements: [] };
+        loaded = { ...EMPTY, members: [me] };
         if (!isSupabaseConfigured) await saveLocal(user.id, loaded);
       }
 
-      if (!cancelled) { dispatch({ type: "LOAD", data: loaded }); setLoading(false); }
+      if (!cancelled) { dispatch({ type: "LOAD", data: normalize(loaded) }); setLoading(false); }
     })();
 
     return () => { cancelled = true; };
@@ -286,6 +365,59 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             amount:    action.settlement.amount,
             date:      action.settlement.date,
           });
+          break;
+
+        case "ADD_WORK":
+          await supabase.from("work_entries").insert({
+            id:               action.entry.id,
+            group_id:         action.entry.groupId,
+            created_by:       action.entry.createdBy,
+            title:            action.entry.title,
+            description:      action.entry.description,
+            category:         action.entry.category,
+            effort:           action.entry.effort,
+            duration_minutes: action.entry.durationMinutes,
+            images:           action.entry.images,
+            date:             action.entry.date,
+            created_at:       action.entry.createdAt,
+          });
+          break;
+
+        case "DELETE_WORK":
+          await supabase.from("work_reactions").delete().eq("work_id", action.id);
+          await supabase.from("work_votes").delete().eq("work_id", action.id);
+          await supabase.from("work_entries").delete().eq("id", action.id);
+          break;
+
+        case "SET_VOTE":
+          // one vote per (work, user) — upsert on the composite unique key
+          await supabase.from("work_votes").upsert({
+            id:         action.vote.id,
+            work_id:    action.vote.workId,
+            user_id:    action.vote.userId,
+            vote:       action.vote.vote,
+            created_at: action.vote.createdAt,
+          }, { onConflict: "work_id,user_id" });
+          break;
+
+        case "RETRACT_VOTE":
+          await supabase.from("work_votes").delete()
+            .eq("work_id", action.workId).eq("user_id", action.userId);
+          break;
+
+        case "ADD_REACTION":
+          await supabase.from("work_reactions").insert({
+            id:         action.reaction.id,
+            work_id:    action.reaction.workId,
+            user_id:    action.reaction.userId,
+            emoji:      action.reaction.emoji,
+            created_at: action.reaction.createdAt,
+          });
+          break;
+
+        case "REMOVE_REACTION":
+          await supabase.from("work_reactions").delete()
+            .eq("work_id", action.workId).eq("user_id", action.userId).eq("emoji", action.emoji);
           break;
       }
     })();

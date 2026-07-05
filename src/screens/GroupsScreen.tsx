@@ -71,16 +71,24 @@ export default function GroupsScreen() {
         </View>
       ) : (
         <FlatList
-          data={data.groups}
+          // Pad an odd count with an invisible cell so the last real card
+          // keeps its half-width instead of stretching across the row.
+          data={data.groups.length % 2 === 1
+            ? [...data.groups, { id: "__spacer__", spacer: true as const }]
+            : data.groups}
           keyExtractor={(g) => g.id}
           numColumns={2}
           columnWrapperStyle={s.row}
           contentContainerStyle={s.list}
-          renderItem={({ item }) => (
-            <View style={s.cardWrap}>
-              <GroupCard group={item} onPress={() => setDetailGroup(item)} />
-            </View>
-          )}
+          renderItem={({ item }) =>
+            "spacer" in item ? (
+              <View style={s.cardWrap} />
+            ) : (
+              <View style={s.cardWrap}>
+                <GroupCard group={item} onPress={() => setDetailGroup(item)} />
+              </View>
+            )
+          }
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -200,7 +208,7 @@ const s = StyleSheet.create({
   safe:            { flex: 1, backgroundColor: C.bg },
   header:          { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
   title:           { color: C.text, fontSize: 24, fontWeight: "700" },
-  list:            { padding: 12, paddingBottom: 96 },
+  list:            { padding: 12, paddingBottom: 96, gap: 12 },
   row:             { gap: 12 },
   cardWrap:        { flex: 1 },
   empty:           { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
