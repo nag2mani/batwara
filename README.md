@@ -5,24 +5,23 @@
 <table align="center">
   <tr>
     <td align="center">
-      <img src="https://github.com/user-attachments/assets/fe7c0940-570a-4e0a-a635-7478b036b581" width="180"><br>
-      <b>Home</b>
+      <img src="https://github.com/user-attachments/assets/38778044-9ce4-47d2-bbe1-86aff5e22e7c" width="180"><br>
+      <b>Dashboard</b>
     </td>
     <td align="center">
-      <img src="https://github.com/user-attachments/assets/b40193d2-83a3-4bfc-b17f-406e83515894" width="180"><br>
-      <b>Recent Transactions</b>
+      <img src="https://github.com/user-attachments/assets/b90675ae-78b3-4da8-b62f-68e2256bbb3b" width="180"><br>
+      <b>Recent Activities</b>
     </td>
     <td align="center">
-      <img src="https://github.com/user-attachments/assets/6480f4b2-c0d5-4544-885b-3cad3626197e" width="180"><br>
-      <b>Expense Details</b>
+      <img src="https://github.com/user-attachments/assets/057593c6-10c9-4b73-b174-965f8f1f8a0f" width="180"><br>
+      <b>Work Ledger</b>
     </td>
     <td align="center">
-      <img src="https://github.com/user-attachments/assets/251fc368-3992-4bc3-a7e9-3f3b26554644" width="180"><br>
+      <img src="https://github.com/user-attachments/assets/a347ad5f-498d-4dab-a1bb-fc866f28060a" width="180"><br>
       <b>Groups</b>
     </td>
   </tr>
 </table>
-
 
 ---
 
