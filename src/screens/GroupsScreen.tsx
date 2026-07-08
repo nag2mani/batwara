@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
-  Modal, ScrollView, Alert,
+  Modal, ScrollView, Alert, RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "../components/Icon";
@@ -21,7 +21,7 @@ import AddFab from "../components/AddFab";
 import { C } from "../theme/colors";
 
 export default function GroupsScreen() {
-  const { data, memberById, meId, dispatch } = useStore();
+  const { data, memberById, meId, dispatch, reload, refreshing } = useStore();
 
   function confirmDeleteGroup(group: Group) {
     Alert.alert(
@@ -66,6 +66,13 @@ export default function GroupsScreen() {
     <SafeAreaView style={s.safe}>
       <View style={s.header}>
         <Text style={s.title}>Groups</Text>
+        <TouchableOpacity
+          onPress={reload}
+          disabled={refreshing}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="refresh" size={22} color={refreshing ? C.textDim : C.green} />
+        </TouchableOpacity>
       </View>
 
       {data.groups.length === 0 ? (
@@ -87,6 +94,9 @@ export default function GroupsScreen() {
           numColumns={2}
           columnWrapperStyle={s.row}
           contentContainerStyle={s.list}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={reload} tintColor={C.green} colors={[C.green]} />
+          }
           renderItem={({ item }) =>
             "spacer" in item ? (
               <View style={s.cardWrap} />
@@ -117,6 +127,9 @@ export default function GroupsScreen() {
                 <Text style={s.detailName}>{detailGroup.name}</Text>
               </View>
               <View style={s.detailActions}>
+                <TouchableOpacity onPress={reload} disabled={refreshing} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Ionicons name="refresh" size={22} color={refreshing ? C.textDim : C.green} />
+                </TouchableOpacity>
                 <TouchableOpacity onPress={() => confirmDeleteGroup(detailGroup)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                   <Ionicons name="trash-outline" size={22} color={C.red} />
                 </TouchableOpacity>

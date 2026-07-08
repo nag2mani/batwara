@@ -91,8 +91,10 @@ function normalize(data: AppData): AppData {
 interface StoreCtx {
   data:       AppData;
   loading:    boolean;
+  refreshing: boolean;                   // a manual/pull-to-refresh reload is in flight
   meId:       string;                    // current user's ID in the data model
   dispatch:   (action: Action) => void;
+  reload:     () => Promise<void>;       // re-fetch everything from the backend
   memberById: Map<string, Member>;
   groupById:  Map<string, Group>;
 }
@@ -264,9 +266,42 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [data, dispatch] = useReducer(reducer, EMPTY);
   const [loading, setLoading] = React.useState(true);
+  const [refreshing, setRefreshing] = React.useState(false);
 
   // meId: which member ID represents "me" in this session
   const meId = user?.id ?? "me";
+
+  // Fetch everything for the current user from the backend into local state.
+  const fetchAll = useCallback(async () => {
+    if (!user) return;
+    let loaded: AppData | null = null;
+
+    if (isSupabaseConfigured) {
+      loaded = await loadFromSupabase(user.id);
+    } else {
+      loaded = await loadLocal(user.id);
+    }
+
+    // First login: start empty, just add self as a member
+    if (!loaded || loaded.members.length === 0) {
+      const me: Member = { id: user.id, name: user.displayName, color: "#34d399" };
+      loaded = { ...EMPTY, members: [me] };
+      if (!isSupabaseConfigured) await saveLocal(user.id, loaded);
+    }
+
+    dispatch({ type: "LOAD", data: normalize(loaded) });
+  }, [user?.id]);
+
+  // Manual refresh — re-pull from the backend (e.g. to see others' verifications).
+  const reload = useCallback(async () => {
+    if (!user) return;
+    setRefreshing(true);
+    try {
+      await fetchAll();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [user?.id, fetchAll]);
 
   useEffect(() => {
     if (!user) { dispatch({ type: "LOAD", data: EMPTY }); setLoading(false); return; }
@@ -274,22 +309,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
 
     (async () => {
-      let loaded: AppData | null = null;
-
-      if (isSupabaseConfigured) {
-        loaded = await loadFromSupabase(user.id);
-      } else {
-        loaded = await loadLocal(user.id);
-      }
-
-      // First login: start empty, just add self as a member
-      if (!loaded || loaded.members.length === 0) {
-        const me: Member = { id: user.id, name: user.displayName, color: "#34d399" };
-        loaded = { ...EMPTY, members: [me] };
-        if (!isSupabaseConfigured) await saveLocal(user.id, loaded);
-      }
-
-      if (!cancelled) { dispatch({ type: "LOAD", data: normalize(loaded) }); setLoading(false); }
+      await fetchAll();
+      if (!cancelled) setLoading(false);
     })();
 
     return () => { cancelled = true; };
@@ -431,7 +452,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <Ctx.Provider value={{ data, loading, meId, dispatch: wrappedDispatch, memberById, groupById }}>
+    <Ctx.Provider value={{ data, loading, refreshing, meId, dispatch: wrappedDispatch, reload, memberById, groupById }}>
       {children}
     </Ctx.Provider>
   );

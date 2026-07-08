@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import {
-  View, Text, TouchableOpacity, StyleSheet, FlatList,
+  View, Text, TouchableOpacity, StyleSheet, FlatList, RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "../components/Icon";
@@ -19,7 +19,7 @@ const FILTERS: { key: Filter; label: string; icon: string }[] = [
 ];
 
 export default function ExpensesScreen() {
-  const { data, groupById, meId } = useStore();
+  const { data, groupById, meId, reload, refreshing } = useStore();
   const [filter, setFilter] = useState<Filter>("group");
 
   const isWork = filter === "work";
@@ -39,6 +39,13 @@ export default function ExpensesScreen() {
     <SafeAreaView style={s.safe}>
       <View style={s.header}>
         <Text style={s.title}>Activity</Text>
+        <TouchableOpacity
+          onPress={reload}
+          disabled={refreshing}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="refresh" size={22} color={refreshing ? C.textDim : C.green} />
+        </TouchableOpacity>
       </View>
 
       {/* Segmented filter: Group / Personal / Work */}
@@ -72,6 +79,9 @@ export default function ExpensesScreen() {
             renderItem={({ item }) => <WorkCard entry={item} />}
             contentContainerStyle={s.workList}
             showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={reload} tintColor={C.green} colors={[C.green]} />
+            }
           />
         )
       ) : filteredExpenses.length === 0 ? (
@@ -87,6 +97,9 @@ export default function ExpensesScreen() {
           ItemSeparatorComponent={() => <View style={s.sep} />}
           contentContainerStyle={s.list}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={reload} tintColor={C.green} colors={[C.green]} />
+          }
         />
       )}
     </SafeAreaView>
