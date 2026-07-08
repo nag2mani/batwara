@@ -102,11 +102,7 @@
 
 ## Database Schema
 
-Run `supabase/setup.sql` in the Supabase SQL Editor to set everything up from scratch. It **drops and recreates all core tables**, so on an existing project run the additive migrations instead:
-
-- **`supabase/work_ledger_migration.sql`** — adds the Work Ledger tables
-- **`supabase/lendings_migration.sql`** — adds the Lending table and its auto-link function
-- **`supabase/email_check_migration.sql`** — adds the helper that limits password-reset emails to registered accounts
+Run **`supabase/setup.sql`** once in the Supabase SQL Editor — it creates every table, RLS policy, trigger, and helper function in a single pass. It **drops and recreates all tables**, so only run it on a fresh project (or when you intend to reset).
 
 ### Tables
 

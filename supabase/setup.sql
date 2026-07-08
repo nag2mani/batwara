@@ -1,31 +1,39 @@
 -- ============================================================
 -- Batwara – Complete Supabase setup (single file, run once)
 --
+-- Sets up EVERYTHING the app needs: profiles, groups, expenses,
+-- settlements, lending/borrowing, the work ledger, plus the auth
+-- trigger and the password-recovery / loan-claim helper functions.
+--
 -- Instructions:
 --   1. Go to Supabase Dashboard → SQL Editor
 --   2. Paste this entire file → click Run
---   3. All tables, policies, and triggers will be created
 --
 -- Safe to re-run: drops everything first then recreates cleanly.
+-- WARNING: dropping the tables wipes existing data — only run on a
+-- fresh project (or when you intend to reset).
 -- ============================================================
 
 
 -- ============================================================
--- CLEANUP  (drop old tables and triggers if they exist)
+-- CLEANUP  (drop old tables, triggers, and functions if they exist)
 -- ============================================================
 
 DROP TRIGGER  IF EXISTS on_auth_user_created ON auth.users;
 DROP FUNCTION IF EXISTS handle_new_user();
+DROP FUNCTION IF EXISTS claim_my_lendings();
+DROP FUNCTION IF EXISTS email_is_registered(text);
 
 DROP TABLE IF EXISTS work_reactions CASCADE;
 DROP TABLE IF EXISTS work_votes     CASCADE;
-DROP TABLE IF EXISTS work_entries    CASCADE;
-DROP TABLE IF EXISTS settlements   CASCADE;
-DROP TABLE IF EXISTS expenses      CASCADE;
-DROP TABLE IF EXISTS group_members CASCADE;
-DROP TABLE IF EXISTS groups        CASCADE;
-DROP TABLE IF EXISTS members       CASCADE;  -- old schema
-DROP TABLE IF EXISTS profiles      CASCADE;
+DROP TABLE IF EXISTS work_entries   CASCADE;
+DROP TABLE IF EXISTS lendings       CASCADE;
+DROP TABLE IF EXISTS settlements    CASCADE;
+DROP TABLE IF EXISTS expenses       CASCADE;
+DROP TABLE IF EXISTS group_members  CASCADE;
+DROP TABLE IF EXISTS groups         CASCADE;
+DROP TABLE IF EXISTS members        CASCADE;  -- old schema
+DROP TABLE IF EXISTS profiles       CASCADE;
 
 
 -- ============================================================
@@ -256,6 +264,85 @@ CREATE POLICY "settlements: group members insert"
 
 
 -- ============================================================
+-- LENDINGS
+-- Money lent to or borrowed from a friend, tracked until returned.
+-- `direction` is from the creator's point of view (lent out / borrowed in).
+-- The other person may be an onboarded user (counterparty_id) or just a
+-- name — with an optional email that auto-links the loan to their account
+-- when they later sign up (see claim_my_lendings below).
+-- ============================================================
+
+CREATE TABLE lendings (
+  id                 text           PRIMARY KEY,
+  created_by         uuid           NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,   -- whoever logged it
+  direction          text           NOT NULL DEFAULT 'lent' CHECK (direction IN ('lent', 'borrowed')),
+  counterparty_id    uuid           REFERENCES auth.users(id) ON DELETE SET NULL,           -- the other person, if onboarded
+  counterparty_name  text           NOT NULL,
+  counterparty_email text,          -- optional; used to auto-link on signup
+  amount             numeric(12, 2) NOT NULL CHECK (amount > 0),
+  description        text,
+  date               timestamptz    NOT NULL,
+  settled_at         timestamptz,   -- NULL = still outstanding
+  created_at         timestamptz    NOT NULL DEFAULT now()
+);
+
+ALTER TABLE lendings ENABLE ROW LEVEL SECURITY;
+
+-- Both sides of the loan can see it
+CREATE POLICY "lendings: participant read"
+  ON lendings FOR SELECT
+  USING (created_by = auth.uid() OR counterparty_id = auth.uid());
+
+-- Only the creator logs the record
+CREATE POLICY "lendings: creator insert"
+  ON lendings FOR INSERT
+  WITH CHECK (created_by = auth.uid());
+
+-- Either side can mark it settled / unsettled
+CREATE POLICY "lendings: participant update"
+  ON lendings FOR UPDATE
+  USING (created_by = auth.uid() OR counterparty_id = auth.uid())
+  WITH CHECK (created_by = auth.uid() OR counterparty_id = auth.uid());
+
+-- Only the creator can delete it
+CREATE POLICY "lendings: creator delete"
+  ON lendings FOR DELETE
+  USING (created_by = auth.uid());
+
+CREATE INDEX lendings_created_by_idx         ON lendings(created_by);
+CREATE INDEX lendings_counterparty_id_idx    ON lendings(counterparty_id);
+CREATE INDEX lendings_counterparty_email_idx ON lendings(lower(counterparty_email));
+CREATE INDEX lendings_date_idx               ON lendings(date DESC);
+
+-- Link loans logged against my email before I onboarded. SECURITY DEFINER so
+-- it can set counterparty_id on rows I don't yet own; the app calls it on load.
+CREATE OR REPLACE FUNCTION claim_my_lendings()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  my_email text;
+BEGIN
+  SELECT email INTO my_email FROM auth.users WHERE id = auth.uid();
+  IF my_email IS NULL THEN
+    RETURN;
+  END IF;
+
+  UPDATE lendings
+     SET counterparty_id = auth.uid()
+   WHERE counterparty_id IS NULL
+     AND counterparty_email IS NOT NULL
+     AND lower(counterparty_email) = lower(my_email);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION claim_my_lendings() FROM public;
+GRANT EXECUTE ON FUNCTION claim_my_lendings() TO authenticated;
+
+
+-- ============================================================
 -- WORK LEDGER — household chore tracking
 --
 --   work_entries   : a logged chore, always tied to a group
@@ -384,3 +471,27 @@ CREATE POLICY "work_reactions: own delete"
   USING (user_id = auth.uid());
 
 CREATE INDEX work_reactions_work_id_idx ON work_reactions(work_id);
+
+
+-- ============================================================
+-- PASSWORD RECOVERY HELPER
+-- Lets the app check — before login — whether an email belongs to a
+-- registered account, so password-reset codes only go to real users.
+-- Returns only a boolean. Exposed to `anon` on purpose (the check runs
+-- while logged out); note this does allow email enumeration.
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION email_is_registered(check_email text)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM auth.users
+    WHERE lower(email) = lower(trim(check_email))
+  );
+$$;
+
+REVOKE ALL ON FUNCTION email_is_registered(text) FROM public;
+GRANT EXECUTE ON FUNCTION email_is_registered(text) TO anon, authenticated;
