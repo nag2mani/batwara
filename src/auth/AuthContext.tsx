@@ -23,6 +23,9 @@ interface AuthCtx {
   signIn: (email: string, password: string) => Promise<string | null>;
   signUp: (email: string, password: string, name: string) => Promise<string | null>;
   signOut: () => Promise<void>;
+  // Password recovery (email OTP): send a code, then verify it + set a new password.
+  sendPasswordReset: (email: string) => Promise<string | null>;
+  resetPassword: (email: string, code: string, newPassword: string) => Promise<string | null>;
 }
 
 const LOCAL_USER_KEY = "batwara:local_user";
@@ -98,6 +101,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return error?.message ?? null;
   }
 
+  // Emails the user a recovery code (Supabase "Reset Password" template),
+  // but only if the email belongs to a registered account.
+  async function sendPasswordReset(email: string): Promise<string | null> {
+    if (!supabase) return null;
+    const { data: exists, error: checkError } =
+      await supabase.rpc("email_is_registered", { check_email: email });
+    if (checkError) return checkError.message;
+    if (!exists) return "No account found with this email.";
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    return error?.message ?? null;
+  }
+
+  // Verifies the emailed code (which signs the user in) and sets the new password.
+  async function resetPassword(email: string, code: string, newPassword: string): Promise<string | null> {
+    if (!supabase) return null;
+    const { error: otpError } = await supabase.auth.verifyOtp({
+      email,
+      token: code.trim(),
+      type: "recovery",
+    });
+    if (otpError) return otpError.message;
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+    return updateError?.message ?? null;
+  }
+
   async function signOut() {
     if (!isSupabaseConfigured || !supabase) {
       // Clear local user so a fresh one is created on next launch
@@ -112,7 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <Ctx.Provider value={{ user, loading, signIn, signUp, signOut }}>
+    <Ctx.Provider value={{ user, loading, signIn, signUp, signOut, sendPasswordReset, resetPassword }}>
       {children}
     </Ctx.Provider>
   );
