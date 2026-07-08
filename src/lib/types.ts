@@ -77,7 +77,7 @@ export const REACTION_EMOJIS = ["👏", "❤️", "🔥", "🙌"] as const;
 export type ReactionEmoji = (typeof REACTION_EMOJIS)[number];
 
 // How long a submission stays open for validation before it is considered expired.
-export const WORK_EXPIRY_HOURS = 48;
+export const WORK_EXPIRY_HOURS = 168;
 
 export interface WorkEntry {
   id: string;
