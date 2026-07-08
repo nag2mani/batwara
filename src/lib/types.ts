@@ -55,19 +55,23 @@ export interface Settlement {
 }
 
 // ---------------------------------------------------------------------------
-// Lending — money you gave to a friend, tracked until it's returned.
-// The friend can be an onboarded app user (counterpartyId set → they see it
-// as "borrowed") or just a free-text name (not onboarded).
+// Lending — money lent to or borrowed from a friend, tracked until returned.
+// The record is always owned by its creator; `direction` says whether the
+// creator lent the money out or borrowed it in. The friend can be an onboarded
+// app user (counterpartyId set → they see the mirror side) or a free-text name.
 // ---------------------------------------------------------------------------
+export type LendingDirection = "lent" | "borrowed";
+
 export interface Lending {
   id: string;
-  lentBy: string;            // user id of the lender (record creator)
-  counterpartyId?: string;   // app user id of the friend, if they're onboarded
+  createdBy: string;         // user id of whoever logged the record
+  direction: LendingDirection; // from the creator's view: they lent out, or borrowed in
+  counterpartyId?: string;   // app user id of the other person, if they're onboarded
   counterpartyName: string;  // display name (a member's name, or a typed-in name)
   counterpartyEmail?: string;// optional; auto-links the loan when they onboard later
   amount: number;
   description?: string;
-  date: string;              // when the money was lent (ISO)
+  date: string;              // when the money changed hands (ISO)
   createdAt: string;
   settledAt?: string;        // set when returned; undefined = still outstanding
 }

@@ -17,7 +17,6 @@ import SettleUpModal from "../components/SettleUpModal";
 import ExpenseRow from "../components/ExpenseRow";
 import WorkRow from "../components/WorkRow";
 import Avatar from "../components/Avatar";
-import AddFab from "../components/AddFab";
 import { C } from "../theme/colors";
 
 export default function GroupsScreen() {
@@ -109,8 +108,6 @@ export default function GroupsScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
-
-      <AddFab onPress={() => setCreateVisible(true)} />
 
       {/* Group detail modal */}
       {detailGroup && (

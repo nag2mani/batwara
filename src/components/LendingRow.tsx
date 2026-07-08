@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import type { Lending } from "../lib/types";
 import { formatDate, formatMoney } from "../lib/utils";
 import { useStore } from "../store/StoreContext";
+import { lendingPerspective } from "../lib/lending";
 import { Ionicons } from "./Icon";
 import LendingDetailModal from "./LendingDetailModal";
 import { C } from "../theme/colors";
@@ -12,20 +13,17 @@ export default function LendingRow({ lending }: { lending: Lending }) {
   const { memberById, meId } = useStore();
   const [detailVisible, setDetailVisible] = useState(false);
 
-  const iLent   = lending.lentBy === meId;
+  const { otherName: other, theyOweMe } = lendingPerspective(lending, meId, memberById);
   const settled = !!lending.settledAt;
-  const other = iLent
-    ? lending.counterpartyName
-    : (memberById.get(lending.lentBy)?.name ?? "Someone");
 
-  const title = iLent ? `You lent ${other}` : `You borrowed from ${other}`;
-  const amountColor = settled ? C.textMid : iLent ? C.green : C.red;
+  const title = theyOweMe ? `You lent ${other}` : `You borrowed from ${other}`;
+  const amountColor = settled ? C.textMid : theyOweMe ? C.green : C.red;
 
   return (
     <>
       <TouchableOpacity style={s.row} onPress={() => setDetailVisible(true)} activeOpacity={0.6}>
-        <View style={[s.iconWrap, { backgroundColor: (iLent ? C.green : C.red) + "1a" }]}>
-          <Ionicons name={iLent ? "arrow-up" : "arrow-down"} size={16} color={iLent ? C.green : C.red} />
+        <View style={[s.iconWrap, { backgroundColor: (theyOweMe ? C.green : C.red) + "1a" }]}>
+          <Ionicons name={theyOweMe ? "arrow-up" : "arrow-down"} size={16} color={theyOweMe ? C.green : C.red} />
         </View>
 
         <View style={s.info}>

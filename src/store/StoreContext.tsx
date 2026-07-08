@@ -268,7 +268,8 @@ function dbToSettlement(row: any): Settlement {
 }
 function dbToLending(row: any): Lending {
   return {
-    id: row.id, lentBy: row.created_by,
+    id: row.id, createdBy: row.created_by,
+    direction: row.direction ?? "lent",
     counterpartyId: row.counterparty_id ?? undefined,
     counterpartyName: row.counterparty_name,
     counterpartyEmail: row.counterparty_email ?? undefined,
@@ -425,6 +426,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           await supabase.from("lendings").insert({
             id:                 action.lending.id,
             created_by:         user.id,
+            direction:          action.lending.direction,
             counterparty_id:    action.lending.counterpartyId ?? null,
             counterparty_name:  action.lending.counterpartyName,
             counterparty_email: action.lending.counterpartyEmail ?? null,

@@ -3,6 +3,7 @@ import { Modal, View, Text, TouchableOpacity, StyleSheet, Alert } from "react-na
 import type { Lending } from "../lib/types";
 import { formatDateLong, formatMoney, todayISO } from "../lib/utils";
 import { useStore } from "../store/StoreContext";
+import { lendingPerspective } from "../lib/lending";
 import { Ionicons } from "./Icon";
 import { C } from "../theme/colors";
 
@@ -15,14 +16,11 @@ interface Props {
 export default function LendingDetailModal({ lending, visible, onClose }: Props) {
   const { dispatch, memberById, meId } = useStore();
 
-  const iLent   = lending.lentBy === meId;
+  const { otherName: other, theyOweMe, iAmCreator } = lendingPerspective(lending, meId, memberById);
   const settled = !!lending.settledAt;
-  const other = iLent
-    ? lending.counterpartyName
-    : (memberById.get(lending.lentBy)?.name ?? "Someone");
 
-  const title = iLent ? `You lent ${other}` : `You borrowed from ${other}`;
-  const accent = iLent ? C.green : C.red;
+  const title = theyOweMe ? `You lent ${other}` : `You borrowed from ${other}`;
+  const accent = theyOweMe ? C.green : C.red;
 
   function toggleSettled() {
     dispatch({
@@ -58,7 +56,7 @@ export default function LendingDetailModal({ lending, visible, onClose }: Props)
         {/* Amount */}
         <View style={s.amountBlock}>
           <View style={[s.iconWrap, { backgroundColor: accent + "1a" }]}>
-            <Ionicons name={iLent ? "arrow-up" : "arrow-down"} size={22} color={accent} />
+            <Ionicons name={theyOweMe ? "arrow-up" : "arrow-down"} size={22} color={accent} />
           </View>
           <Text style={[s.amount, { color: accent }]}>{formatMoney(lending.amount)}</Text>
           <Text style={s.title}>{title}</Text>
@@ -73,8 +71,8 @@ export default function LendingDetailModal({ lending, visible, onClose }: Props)
         <View style={s.metaCard}>
           <Row label="Date" value={formatDateLong(lending.date)} />
           {lending.description ? <Row label="Note" value={lending.description} /> : null}
-          {iLent && lending.counterpartyEmail ? <Row label="Email" value={lending.counterpartyEmail} /> : null}
-          {iLent ? (
+          {iAmCreator && lending.counterpartyEmail ? <Row label="Email" value={lending.counterpartyEmail} /> : null}
+          {iAmCreator ? (
             <Row label="Linked" value={lending.counterpartyId ? "Yes — shows on their account" : "No — name only"} />
           ) : null}
           {settled ? <Row label="Settled on" value={formatDateLong(lending.settledAt!)} /> : null}
@@ -97,7 +95,7 @@ export default function LendingDetailModal({ lending, visible, onClose }: Props)
             </Text>
           </TouchableOpacity>
 
-          {iLent && (
+          {iAmCreator && (
             <TouchableOpacity style={s.deleteBtn} onPress={confirmDelete} activeOpacity={0.85}>
               <Ionicons name="trash-outline" size={18} color={C.red} />
               <Text style={s.deleteText}>Delete loan</Text>

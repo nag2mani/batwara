@@ -1,19 +1,21 @@
 -- ============================================================
--- LENDINGS — money lent to a friend, tracked until returned.
+-- LENDINGS — money lent to or borrowed from a friend, tracked until returned.
 --
--- The lender (created_by) always sees the record. If the friend is an
--- onboarded app user, counterparty_id links to them so they see it on
--- their side as "borrowed". If not onboarded, only counterparty_name (and
--- optionally counterparty_email) is stored; when that person later signs up
--- with the same email, claim_my_lendings() links the loan to their account.
+-- The creator (created_by) always sees the record; `direction` says whether
+-- they lent the money out or borrowed it in. If the other person is an
+-- onboarded app user, counterparty_id links to them so they see the mirror
+-- side. If not onboarded, only counterparty_name (and optionally
+-- counterparty_email) is stored; when that person later signs up with the same
+-- email, claim_my_lendings() links the loan to their account.
 --
 -- Safe to re-run on an existing project (idempotent: IF NOT EXISTS / OR REPLACE).
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS lendings (
   id                text           PRIMARY KEY,
-  created_by        uuid           NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,   -- lender
-  counterparty_id   uuid           REFERENCES auth.users(id) ON DELETE SET NULL,           -- borrower, if onboarded
+  created_by        uuid           NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,   -- whoever logged it
+  direction         text           NOT NULL DEFAULT 'lent' CHECK (direction IN ('lent', 'borrowed')),
+  counterparty_id   uuid           REFERENCES auth.users(id) ON DELETE SET NULL,           -- the other person, if onboarded
   counterparty_name text           NOT NULL,
   counterparty_email text,         -- optional; used to auto-link when they onboard later
   amount            numeric(12, 2) NOT NULL CHECK (amount > 0),
@@ -23,8 +25,9 @@ CREATE TABLE IF NOT EXISTS lendings (
   created_at        timestamptz    NOT NULL DEFAULT now()
 );
 
--- For projects that already created the table before this column existed.
+-- For projects that already created the table before these columns existed.
 ALTER TABLE lendings ADD COLUMN IF NOT EXISTS counterparty_email text;
+ALTER TABLE lendings ADD COLUMN IF NOT EXISTS direction text NOT NULL DEFAULT 'lent';
 
 ALTER TABLE lendings ENABLE ROW LEVEL SECURITY;
 

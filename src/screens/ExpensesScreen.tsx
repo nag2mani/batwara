@@ -9,8 +9,6 @@ import { tallyWork } from "../lib/work";
 import ExpenseRow from "../components/ExpenseRow";
 import WorkCard from "../components/WorkCard";
 import LendingRow from "../components/LendingRow";
-import AddLendingModal from "../components/AddLendingModal";
-import AddFab from "../components/AddFab";
 import { C } from "../theme/colors";
 
 type Filter = "group" | "personal" | "work" | "lending";
@@ -25,7 +23,6 @@ const FILTERS: { key: Filter; label: string; icon: string }[] = [
 export default function ExpensesScreen() {
   const { data, groupById, meId, reload, refreshing } = useStore();
   const [filter, setFilter] = useState<Filter>("group");
-  const [addLendingVisible, setAddLendingVisible] = useState(false);
 
   const isWork    = filter === "work";
   const isLending = filter === "lending";
@@ -82,7 +79,7 @@ export default function ExpensesScreen() {
           <View style={s.empty}>
             <Ionicons name="swap-horizontal-outline" size={48} color={C.textDim} />
             <Text style={s.emptyText}>No loans yet</Text>
-            <Text style={s.emptyHint}>Tap + to log money you lent to a friend.</Text>
+            <Text style={s.emptyHint}>Add a loan from the + button on the Dashboard.</Text>
           </View>
         ) : (
           <FlatList
@@ -133,9 +130,6 @@ export default function ExpensesScreen() {
           }
         />
       )}
-
-      {isLending && <AddFab onPress={() => setAddLendingVisible(true)} />}
-      <AddLendingModal visible={addLendingVisible} onClose={() => setAddLendingVisible(false)} />
     </SafeAreaView>
   );
 }

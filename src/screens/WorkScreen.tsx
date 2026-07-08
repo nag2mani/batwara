@@ -8,8 +8,6 @@ import { minutesToHours } from "../lib/utils";
 import { C } from "../theme/colors";
 import WorkCard from "../components/WorkCard";
 import WorkLeaderboard from "../components/WorkLeaderboard";
-import AddWorkModal from "../components/AddWorkModal";
-import AddFab from "../components/AddFab";
 
 type Segment = "feed" | "pending" | "board";
 
@@ -34,7 +32,6 @@ export default function WorkScreen() {
   const insets = useSafeAreaInsets();
   const [groupId, setGroupId] = useState<string>(data.groups[0]?.id ?? "");
   const [segment, setSegment] = useState<Segment>("feed");
-  const [addVisible, setAddVisible] = useState(false);
   const [groupMenuOpen, setGroupMenuOpen] = useState(false);
 
   // Keep a valid group selected as groups load/change.
@@ -216,9 +213,6 @@ export default function WorkScreen() {
 
         {segment === "board" && <WorkLeaderboard groupId={activeGroupId} />}
       </ScrollView>
-
-      <AddFab onPress={() => setAddVisible(true)} />
-      <AddWorkModal visible={addVisible} onClose={() => setAddVisible(false)} groupId={activeGroupId} />
     </SafeAreaView>
   );
 }

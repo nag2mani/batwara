@@ -4,6 +4,7 @@ import {
   StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "./Icon";
+import type { LendingDirection } from "../lib/types";
 import { useStore } from "../store/StoreContext";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { uid, todayISO } from "../lib/utils";
@@ -23,6 +24,7 @@ interface PersonResult {
 export default function AddLendingModal({ visible, onClose }: Props) {
   const { data, dispatch, meId } = useStore();
 
+  const [direction,   setDirection]   = useState<LendingDirection>("lent");
   const [query,       setQuery]       = useState("");
   const [results,     setResults]     = useState<PersonResult[]>([]);
   const [searching,   setSearching]   = useState(false);
@@ -32,7 +34,10 @@ export default function AddLendingModal({ visible, onClose }: Props) {
   const [description, setDescription] = useState("");
   const [error,       setError]       = useState<string | null>(null);
 
+  const lent = direction === "lent";
+
   function reset() {
+    setDirection("lent");
     setQuery(""); setResults([]); setSearching(false); setSelected(null);
     setManualEmail(""); setAmount(""); setDescription(""); setError(null);
   }
@@ -88,7 +93,7 @@ export default function AddLendingModal({ visible, onClose }: Props) {
     setError(null);
     const amt = parseFloat(amount);
     const name = selected ? selected.name : query.trim();
-    if (!name) { setError("Enter who you lent to"); return; }
+    if (!name) { setError(lent ? "Enter who you lent to" : "Enter who you borrowed from"); return; }
     if (isNaN(amt) || amt <= 0) { setError("Enter a valid amount"); return; }
 
     const email = selected ? selected.email : (manualEmail.trim() || undefined);
@@ -97,7 +102,8 @@ export default function AddLendingModal({ visible, onClose }: Props) {
       type: "ADD_LENDING",
       lending: {
         id: uid("l"),
-        lentBy: meId,
+        createdBy: meId,
+        direction,
         counterpartyId: selected?.id,
         counterpartyName: name,
         counterpartyEmail: email,
@@ -122,15 +128,34 @@ export default function AddLendingModal({ visible, onClose }: Props) {
         <View style={s.container}>
           {/* Header */}
           <View style={s.header}>
-            <Text style={s.title}>Lend money</Text>
+            <Text style={s.title}>Add loan</Text>
             <TouchableOpacity onPress={handleClose}>
               <Ionicons name="close" size={24} color={C.textMid} />
             </TouchableOpacity>
           </View>
 
           <ScrollView style={s.flex} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            {/* Direction */}
+            <View style={s.toggle}>
+              {(["lent", "borrowed"] as LendingDirection[]).map((d) => {
+                const active = direction === d;
+                return (
+                  <TouchableOpacity
+                    key={d}
+                    style={[s.toggleBtn, active && s.toggleBtnActive]}
+                    onPress={() => setDirection(d)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[s.toggleText, active && { color: C.green }]}>
+                      {d === "lent" ? "I lent" : "I borrowed"}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
             {/* Who */}
-            <Text style={s.label}>Lent to</Text>
+            <Text style={s.label}>{lent ? "Lent to" : "Borrowed from"}</Text>
 
             {selected ? (
               <View style={s.selectedRow}>
@@ -181,7 +206,7 @@ export default function AddLendingModal({ visible, onClose }: Props) {
                     </Text>
                     <Text style={s.manualHint}>
                       Add their email (optional) — when they sign up with it, this loan
-                      will show on their account as borrowed.
+                      will show on their account too.
                     </Text>
                     <TextInput
                       style={s.input}
@@ -238,6 +263,10 @@ const s = StyleSheet.create({
   header:       { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
   title:        { color: C.text, fontSize: 20, fontWeight: "700" },
   label:        { color: C.textMid, fontSize: 13, fontWeight: "500", marginBottom: 8, marginTop: 16 },
+  toggle:       { flexDirection: "row", gap: 8, marginTop: 4 },
+  toggleBtn:    { flex: 1, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: C.border, alignItems: "center", backgroundColor: C.card },
+  toggleBtnActive: { borderColor: C.green, backgroundColor: C.green + "1a" },
+  toggleText:   { color: C.textMid, fontSize: 14, fontWeight: "600" },
   input:        { backgroundColor: C.card, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, color: C.text, fontSize: 15, borderWidth: 1, borderColor: C.border },
   searchWrap:   { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: C.card, borderRadius: 12, paddingHorizontal: 14, borderWidth: 1, borderColor: C.border },
   searchInput:  { flex: 1, paddingVertical: 14, color: C.text, fontSize: 15 },
