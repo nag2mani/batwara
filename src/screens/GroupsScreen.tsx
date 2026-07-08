@@ -12,8 +12,10 @@ import { formatMoney } from "../lib/utils";
 import GroupCard from "../components/GroupCard";
 import CreateGroupModal from "../components/CreateGroupModal";
 import AddExpenseModal from "../components/AddExpenseModal";
+import AddWorkModal from "../components/AddWorkModal";
 import SettleUpModal from "../components/SettleUpModal";
 import ExpenseRow from "../components/ExpenseRow";
+import WorkRow from "../components/WorkRow";
 import Avatar from "../components/Avatar";
 import AddFab from "../components/AddFab";
 import { C } from "../theme/colors";
@@ -41,10 +43,15 @@ export default function GroupsScreen() {
   const [createVisible, setCreateVisible] = useState(false);
   const [detailGroup,   setDetailGroup]   = useState<Group | null>(null);
   const [addVisible,    setAddVisible]    = useState(false);
+  const [addWorkVisible, setAddWorkVisible] = useState(false);
   const [settleVisible, setSettleVisible] = useState(false);
 
   const detailExpenses = detailGroup
     ? data.expenses.filter((e) => e.groupId === detailGroup.id)
+    : [];
+
+  const detailWork = detailGroup
+    ? data.work.filter((w) => w.groupId === detailGroup.id)
     : [];
 
   // Your direct balance with each other member of this group.
@@ -183,6 +190,26 @@ export default function GroupsScreen() {
                   </React.Fragment>
                 ))
               )}
+
+              {/* Work */}
+              <View style={s.sectionRow}>
+                <Text style={s.sectionLabel}>Work</Text>
+                <TouchableOpacity style={s.addExpBtn} onPress={() => setAddWorkVisible(true)}>
+                  <Ionicons name="add" size={16} color={C.green} />
+                  <Text style={s.addExpText}>Add</Text>
+                </TouchableOpacity>
+              </View>
+
+              {detailWork.length === 0 ? (
+                <Text style={s.noExpenses}>No work yet</Text>
+              ) : (
+                detailWork.map((w, i) => (
+                  <React.Fragment key={w.id}>
+                    <WorkRow entry={w} />
+                    {i < detailWork.length - 1 && <View style={s.divider} />}
+                  </React.Fragment>
+                ))
+              )}
             </ScrollView>
           </View>
 
@@ -190,6 +217,11 @@ export default function GroupsScreen() {
             visible={addVisible}
             onClose={() => setAddVisible(false)}
             defaultGroupId={detailGroup.id}
+          />
+          <AddWorkModal
+            visible={addWorkVisible}
+            onClose={() => setAddWorkVisible(false)}
+            groupId={detailGroup.id}
           />
           <SettleUpModal
             visible={settleVisible}
