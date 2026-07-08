@@ -3,7 +3,7 @@ import React, {
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type {
-  AppData, Expense, Group, Member, Settlement, WorkEntry, WorkReaction, WorkVote,
+  AppData, Expense, Group, Lending, Member, Settlement, WorkEntry, WorkReaction, WorkVote,
 } from "../lib/types";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { useAuth } from "../auth/AuthContext";
@@ -18,6 +18,9 @@ type Action =
   | { type: "ADD_GROUP";     group:      Group;  newMembers: Member[] }
   | { type: "DELETE_GROUP";  id:         string }
   | { type: "ADD_SETTLEMENT";settlement: Settlement }
+  | { type: "ADD_LENDING";   lending:    Lending }
+  | { type: "DELETE_LENDING";id:         string }
+  | { type: "SET_LENDING_SETTLED"; id:   string; settledAt: string | null }
   | { type: "ADD_WORK";      entry:      WorkEntry }
   | { type: "DELETE_WORK";   id:         string }
   | { type: "SET_VOTE";      vote:       WorkVote }                       // replaces this user's vote on this work
@@ -45,6 +48,14 @@ function reducer(state: AppData, action: Action): AppData {
       workReactions: state.workReactions.filter(r => !state.work.find(w => w.id === r.workId && w.groupId === action.id)),
     };
     case "ADD_SETTLEMENT": return { ...state, settlements: [action.settlement, ...state.settlements] };
+
+    case "ADD_LENDING":    return { ...state, lendings: [action.lending, ...state.lendings] };
+    case "DELETE_LENDING": return { ...state, lendings: state.lendings.filter(l => l.id !== action.id) };
+    case "SET_LENDING_SETTLED": return {
+      ...state,
+      lendings: state.lendings.map(l =>
+        l.id === action.id ? { ...l, settledAt: action.settledAt ?? undefined } : l),
+    };
 
     case "ADD_WORK":       return { ...state, work: [action.entry, ...state.work] };
     case "DELETE_WORK":    return {
@@ -79,6 +90,7 @@ function reducer(state: AppData, action: Action): AppData {
 function normalize(data: AppData): AppData {
   return {
     ...data,
+    lendings:      data.lendings      ?? [],
     work:          data.work          ?? [],
     workVotes:     data.workVotes     ?? [],
     workReactions: data.workReactions ?? [],
@@ -100,7 +112,7 @@ interface StoreCtx {
 }
 
 const Ctx = createContext<StoreCtx | null>(null);
-const EMPTY: AppData = { members: [], groups: [], expenses: [], settlements: [], work: [], workVotes: [], workReactions: [] };
+const EMPTY: AppData = { members: [], groups: [], expenses: [], settlements: [], lendings: [], work: [], workVotes: [], workReactions: [] };
 
 // ---------------------------------------------------------------------------
 // Local storage (offline / no-Supabase mode)
@@ -197,6 +209,15 @@ async function loadFromSupabase(userId: string): Promise<AppData | null> {
       ? await supabase.from("settlements").select("*").in("group_id", groupIds)
       : { data: [] };
 
+    // 5b. Lendings — claim any logged against my email before I onboarded,
+    //     then load loans where I'm the lender or the (onboarded) counterparty.
+    await supabase.rpc("claim_my_lendings");
+    const { data: lendingRows } = await supabase
+      .from("lendings")
+      .select("*")
+      .or(`created_by.eq.${userId},counterparty_id.eq.${userId}`)
+      .order("date", { ascending: false });
+
     // 6. Work ledger — entries for my groups, plus their votes & reactions
     const { data: workRows } = groupIds.length > 0
       ? await supabase.from("work_entries").select("*").in("group_id", groupIds).order("date", { ascending: false })
@@ -217,6 +238,7 @@ async function loadFromSupabase(userId: string): Promise<AppData | null> {
       groups,
       expenses,
       settlements:   (settlementRows ?? []).map(dbToSettlement),
+      lendings:      (lendingRows ?? []).map(dbToLending),
       work:          (workRows ?? []).map(dbToWork),
       workVotes:     (voteRes.data ?? []).map(dbToVote),
       workReactions: (reactionRes.data ?? []).map(dbToReaction),
@@ -242,6 +264,17 @@ function dbToSettlement(row: any): Settlement {
   return {
     id: row.id, from: row.from_user, to: row.to_user,
     amount: Number(row.amount), date: row.date, groupId: row.group_id ?? undefined,
+  };
+}
+function dbToLending(row: any): Lending {
+  return {
+    id: row.id, lentBy: row.created_by,
+    counterpartyId: row.counterparty_id ?? undefined,
+    counterpartyName: row.counterparty_name,
+    counterpartyEmail: row.counterparty_email ?? undefined,
+    amount: Number(row.amount), description: row.description ?? undefined,
+    date: row.date, createdAt: row.created_at,
+    settledAt: row.settled_at ?? undefined,
   };
 }
 function dbToWork(row: any): WorkEntry {
@@ -386,6 +419,28 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             amount:    action.settlement.amount,
             date:      action.settlement.date,
           });
+          break;
+
+        case "ADD_LENDING":
+          await supabase.from("lendings").insert({
+            id:                 action.lending.id,
+            created_by:         user.id,
+            counterparty_id:    action.lending.counterpartyId ?? null,
+            counterparty_name:  action.lending.counterpartyName,
+            counterparty_email: action.lending.counterpartyEmail ?? null,
+            amount:             action.lending.amount,
+            description:        action.lending.description ?? null,
+            date:               action.lending.date,
+            settled_at:         action.lending.settledAt ?? null,
+          });
+          break;
+
+        case "DELETE_LENDING":
+          await supabase.from("lendings").delete().eq("id", action.id);
+          break;
+
+        case "SET_LENDING_SETTLED":
+          await supabase.from("lendings").update({ settled_at: action.settledAt }).eq("id", action.id);
           break;
 
         case "ADD_WORK":

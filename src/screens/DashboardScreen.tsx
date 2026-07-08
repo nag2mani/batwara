@@ -11,6 +11,7 @@ import { formatMoney } from "../lib/utils";
 import { CATEGORY_META, type Category } from "../lib/types";
 import ExpenseRow from "../components/ExpenseRow";
 import WorkRow from "../components/WorkRow";
+import LendingRow from "../components/LendingRow";
 import SettleUpModal from "../components/SettleUpModal";
 import AddExpenseModal from "../components/AddExpenseModal";
 import CategoryBreakdownModal from "../components/CategoryBreakdownModal";
@@ -38,6 +39,14 @@ export default function DashboardScreen() {
 
   const groupRangeTotal    = ranged.filter((e) => e.type === "group").reduce((s, e) => s + e.amount, 0);
   const personalRangeTotal = ranged.filter((e) => e.type === "personal").reduce((s, e) => s + e.amount, 0);
+
+  // Outstanding loans (current state, not range-scoped).
+  const lentOutstanding     = data.lendings
+    .filter((l) => l.lentBy === meId && !l.settledAt)
+    .reduce((s, l) => s + l.amount, 0);
+  const borrowedOutstanding = data.lendings
+    .filter((l) => l.counterpartyId === meId && !l.settledAt)
+    .reduce((s, l) => s + l.amount, 0);
 
   const myBalance = computeBalances(data.expenses, data.settlements).get(meId) ?? 0;
   // Direct balance between you and each other person (not globally simplified).
@@ -72,12 +81,15 @@ export default function DashboardScreen() {
     pct:   rangedTotal > 0 ? (d.population / rangedTotal) * 100 : 0,
   }));
 
-  // Recent activity — group + personal expenses AND work logs, merged chronologically.
+  // Recent activity — expenses, work logs AND loans, merged chronologically.
   const recentFeed = [
     ...ranged.map((e) => ({ kind: "expense" as const, id: e.id, date: e.date, expense: e })),
     ...data.work
       .filter((w) => inRange(w.date))
       .map((w) => ({ kind: "work" as const, id: w.id, date: w.date, work: w })),
+    ...data.lendings
+      .filter((l) => inRange(l.date))
+      .map((l) => ({ kind: "lending" as const, id: l.id, date: l.date, lending: l })),
   ]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 7);
@@ -116,6 +128,28 @@ export default function DashboardScreen() {
             <Text style={s.miniSub}>{range.label.toLowerCase()}</Text>
           </View>
         </View>
+
+        {/* Outstanding loans */}
+        {(lentOutstanding > 0.005 || borrowedOutstanding > 0.005) && (
+          <View style={s.twoCol}>
+            <View style={[s.card, s.halfCard]}>
+              <View style={s.miniIconRow}>
+                <Ionicons name="arrow-up" size={15} color={C.green} />
+                <Text style={s.miniLabel}>You lent</Text>
+              </View>
+              <Text style={[s.miniAmount, { color: C.green }]}>{formatMoney(lentOutstanding)}</Text>
+              <Text style={s.miniSub}>outstanding</Text>
+            </View>
+            <View style={[s.card, s.halfCard]}>
+              <View style={s.miniIconRow}>
+                <Ionicons name="arrow-down" size={15} color={C.red} />
+                <Text style={[s.miniLabel, { color: C.red }]}>You borrowed</Text>
+              </View>
+              <Text style={[s.miniAmount, { color: C.red }]}>{formatMoney(borrowedOutstanding)}</Text>
+              <Text style={s.miniSub}>outstanding</Text>
+            </View>
+          </View>
+        )}
 
         {/* Net balance card — tap to settle up */}
         <TouchableOpacity style={s.card} activeOpacity={0.7} onPress={() => setSettleVisible(true)}>
@@ -192,7 +226,9 @@ export default function DashboardScreen() {
                 <React.Fragment key={item.id}>
                   {item.kind === "expense"
                     ? <ExpenseRow expense={item.expense} />
-                    : <WorkRow entry={item.work} />}
+                    : item.kind === "work"
+                    ? <WorkRow entry={item.work} />
+                    : <LendingRow lending={item.lending} />}
                   <View style={s.divider} />
                 </React.Fragment>
               ))

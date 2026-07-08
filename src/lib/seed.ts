@@ -74,6 +74,7 @@ export function buildSeedData(myName: string): AppData {
     groups: [flat4b, goaTrip, officeLunch],
     expenses,
     settlements,
+    lendings: [],
     work,
     workVotes,
     workReactions,

@@ -8,23 +8,34 @@ import { useStore } from "../store/StoreContext";
 import { tallyWork } from "../lib/work";
 import ExpenseRow from "../components/ExpenseRow";
 import WorkCard from "../components/WorkCard";
+import LendingRow from "../components/LendingRow";
+import AddLendingModal from "../components/AddLendingModal";
+import AddFab from "../components/AddFab";
 import { C } from "../theme/colors";
 
-type Filter = "group" | "personal" | "work";
+type Filter = "group" | "personal" | "work" | "lending";
 
 const FILTERS: { key: Filter; label: string; icon: string }[] = [
   { key: "group",    label: "Group",    icon: "people-outline" },
   { key: "personal", label: "Personal", icon: "person-outline" },
+  { key: "lending",  label: "Lending",  icon: "swap-horizontal-outline" },
   { key: "work",     label: "Work",     icon: "construct-outline" },
 ];
 
 export default function ExpensesScreen() {
   const { data, groupById, meId, reload, refreshing } = useStore();
   const [filter, setFilter] = useState<Filter>("group");
+  const [addLendingVisible, setAddLendingVisible] = useState(false);
 
-  const isWork = filter === "work";
+  const isWork    = filter === "work";
+  const isLending = filter === "lending";
 
   const filteredExpenses = data.expenses.filter((e) => e.type === filter);
+
+  // Loans involving me (either lent or borrowed), newest first.
+  const lendings = data.lendings
+    .slice()
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   // Work created by the current user that is still pending or has been verified
   // (rejected submissions are hidden here).
@@ -66,7 +77,27 @@ export default function ExpensesScreen() {
       </View>
 
       {/* List */}
-      {isWork ? (
+      {isLending ? (
+        lendings.length === 0 ? (
+          <View style={s.empty}>
+            <Ionicons name="swap-horizontal-outline" size={48} color={C.textDim} />
+            <Text style={s.emptyText}>No loans yet</Text>
+            <Text style={s.emptyHint}>Tap + to log money you lent to a friend.</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={lendings}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => <LendingRow lending={item} />}
+            ItemSeparatorComponent={() => <View style={s.sep} />}
+            contentContainerStyle={s.list}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={reload} tintColor={C.green} colors={[C.green]} />
+            }
+          />
+        )
+      ) : isWork ? (
         myWork.length === 0 ? (
           <View style={s.empty}>
             <Ionicons name="construct-outline" size={48} color={C.textDim} />
@@ -102,6 +133,9 @@ export default function ExpensesScreen() {
           }
         />
       )}
+
+      {isLending && <AddFab onPress={() => setAddLendingVisible(true)} />}
+      <AddLendingModal visible={addLendingVisible} onClose={() => setAddLendingVisible(false)} />
     </SafeAreaView>
   );
 }
@@ -119,4 +153,5 @@ const s = StyleSheet.create({
   sep:         { height: 1, backgroundColor: C.border },
   empty:       { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
   emptyText:   { color: C.textMid, fontSize: 16 },
+  emptyHint:   { color: C.textDim, fontSize: 13, textAlign: "center", paddingHorizontal: 40 },
 });

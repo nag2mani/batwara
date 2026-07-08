@@ -1,9 +1,9 @@
 export const CATEGORIES = [
-  "Grocery",
   "Rent",
-  "Entertainment",
+  "Grocery",
   "Dining",
   "Utilities",
+  "Entertainment",
   "Others",
 ] as const;
 
@@ -52,6 +52,24 @@ export interface Settlement {
   amount: number;
   date: string;
   groupId?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Lending — money you gave to a friend, tracked until it's returned.
+// The friend can be an onboarded app user (counterpartyId set → they see it
+// as "borrowed") or just a free-text name (not onboarded).
+// ---------------------------------------------------------------------------
+export interface Lending {
+  id: string;
+  lentBy: string;            // user id of the lender (record creator)
+  counterpartyId?: string;   // app user id of the friend, if they're onboarded
+  counterpartyName: string;  // display name (a member's name, or a typed-in name)
+  counterpartyEmail?: string;// optional; auto-links the loan when they onboard later
+  amount: number;
+  description?: string;
+  date: string;              // when the money was lent (ISO)
+  createdAt: string;
+  settledAt?: string;        // set when returned; undefined = still outstanding
 }
 
 // ---------------------------------------------------------------------------
@@ -114,6 +132,7 @@ export interface AppData {
   groups: Group[];
   expenses: Expense[];
   settlements: Settlement[];
+  lendings: Lending[];
   work: WorkEntry[];
   workVotes: WorkVote[];
   workReactions: WorkReaction[];
