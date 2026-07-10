@@ -5,23 +5,30 @@
 <table align="center">
   <tr>
     <td align="center">
-      <img src="https://github.com/user-attachments/assets/38778044-9ce4-47d2-bbe1-86aff5e22e7c" width="180"><br>
+      <img src="https://github.com/user-attachments/assets/a5755746-5cb9-4236-bf58-c5503b588267" width="180"><br>
       <b>Dashboard</b>
     </td>
     <td align="center">
-      <img src="https://github.com/user-attachments/assets/b90675ae-78b3-4da8-b62f-68e2256bbb3b" width="180"><br>
+      <img src="https://github.com/user-attachments/assets/90172fc5-1eaa-4ccd-b52f-ff84535c3ff4" width="180"><br>
       <b>Recent Activities</b>
     </td>
     <td align="center">
-      <img src="https://github.com/user-attachments/assets/057593c6-10c9-4b73-b174-965f8f1f8a0f" width="180"><br>
+      <img src="https://github.com/user-attachments/assets/13e81fae-e042-402a-8e11-b3e17cc0c477" width="180"><br>
       <b>Work Ledger</b>
     </td>
     <td align="center">
-      <img src="https://github.com/user-attachments/assets/a347ad5f-498d-4dab-a1bb-fc866f28060a" width="180"><br>
+      <img src="https://github.com/user-attachments/assets/38a19bc1-e71d-468f-881c-520fc55e580c" width="180"><br>
       <b>Groups</b>
     </td>
   </tr>
 </table>
+
+<p align="center">
+  📸 <b>See more app screenshots:</b><br>
+  <a href="https://drive.google.com/drive/folders/1WHYGqD2UvY5D5iDFCZm3tUVD0piyslo-?usp=drive_link">
+    View Complete Screenshot Gallery
+  </a>
+</p>
 
 ---
 
