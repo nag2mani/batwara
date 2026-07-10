@@ -3,6 +3,7 @@ import { View, StyleSheet } from "react-native";
 import { Ionicons } from "./Icon";
 import type { Category } from "../lib/types";
 import { CATEGORY_META } from "../lib/types";
+import { useThemedStyles } from "../theme/ThemeContext";
 
 const ICONS: Record<Category, keyof typeof Ionicons.glyphMap> = {
   Grocery:       "basket-outline",
@@ -19,6 +20,7 @@ interface Props {
 }
 
 export default function CategoryIcon({ category, size = 20 }: Props) {
+  const s = useThemedStyles(makeStyles);
   const meta = CATEGORY_META[category];
   const boxSize = size + 16;
   return (
@@ -28,6 +30,6 @@ export default function CategoryIcon({ category, size = 20 }: Props) {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   box: { alignItems: "center", justifyContent: "center" },
 });

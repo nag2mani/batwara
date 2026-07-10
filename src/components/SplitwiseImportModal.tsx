@@ -9,6 +9,7 @@ import { useStore } from "../store/StoreContext";
 import { useAuth } from "../auth/AuthContext";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { MEMBER_COLORS, C } from "../theme/colors";
+import { useThemedStyles } from "../theme/ThemeContext";
 import {
   parseSplitwiseCSV, buildImportData, nameFromIdentifier,
   type MemberCol, type ParsedImport,
@@ -26,6 +27,7 @@ type Step = "pick" | "resolving" | "review" | "importing";
 const EMOJIS = ["🏠", "🛒", "🍱", "🏖️", "✈️", "🎉", "🚗", "💼"];
 
 export default function SplitwiseImportModal({ visible, onClose }: Props) {
+  const s = useThemedStyles(makeStyles);
   const { data, dispatch, meId, memberById } = useStore();
   const { user: authUser } = useAuth();
 
@@ -326,7 +328,7 @@ function labelTextStyle(label: string) {
   return { color: C.amber };
 }
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container:       { flex: 1, backgroundColor: C.bg, padding: 20 },
   header:          { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 },
   title:           { color: C.text, fontSize: 20, fontWeight: "700" },

@@ -5,12 +5,21 @@ import { Ionicons } from "../components/Icon";
 import { useAuth } from "../auth/AuthContext";
 import { useStore } from "../store/StoreContext";
 import { C } from "../theme/colors";
+import { useTheme, useThemedStyles } from "../theme/ThemeContext";
 import Avatar from "../components/Avatar";
 import SplitwiseImportModal from "../components/SplitwiseImportModal";
 
 export default function SettingsScreen() {
   const { user: authUser, signOut: authSignOut } = useAuth();
   const { memberById, meId } = useStore();
+  const { preference, setPreference } = useTheme();
+  const s = useThemedStyles(makeStyles);
+
+  const THEME_OPTIONS = [
+    { key: "light", label: "Light", icon: "sunny-outline", color: C.amber },
+    { key: "dark", label: "Dark", icon: "moon-outline", color: C.sky },
+    { key: "system", label: "System", icon: "phone-portrait-outline", color: C.green },
+  ] as const;
 
   const me = memberById.get(meId) ?? [...memberById.values()][0];
   const displayName = authUser?.displayName ?? "User";
@@ -35,6 +44,27 @@ export default function SettingsScreen() {
           <View style={s.profileInfo}>
             <Text style={s.profileName}>{displayName}</Text>
             <Text style={s.profileEmail}>{authUser?.isLocal ? "Local mode (no Supabase)" : authUser?.email}</Text>
+          </View>
+        </View>
+
+        {/* Appearance */}
+        <View style={s.group}>
+          <Text style={s.sectionHeader}>Appearance</Text>
+          <View style={s.segment}>
+            {THEME_OPTIONS.map((opt) => {
+              const active = preference === opt.key;
+              return (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[s.segmentBtn, active && s.segmentBtnActive]}
+                  onPress={() => setPreference(opt.key)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name={opt.icon as any} size={18} color={active ? opt.color : C.textMid} />
+                  <Text style={[s.segmentText, active && s.segmentTextActive]}>{opt.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
@@ -101,6 +131,7 @@ export default function SettingsScreen() {
 }
 
 function Row({ icon, label, value }: { icon: string; label: string; value: string }) {
+  const rs = useThemedStyles(makeRowStyles);
   return (
     <View style={rs.row}>
       <Ionicons name={icon as any} size={18} color={C.textMid} />
@@ -110,14 +141,20 @@ function Row({ icon, label, value }: { icon: string; label: string; value: strin
   );
 }
 
-const rs = StyleSheet.create({
+const makeRowStyles = () => StyleSheet.create({
   row:   { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 14 },
   label: { flex: 1, color: C.textMid, fontSize: 15 },
   value: { color: C.text, fontSize: 14 },
 });
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   safe:         { flex: 1, backgroundColor: C.bg },
+
+  segment:      { flexDirection: "row", gap: 8, backgroundColor: C.card, borderRadius: 16, borderWidth: 1, borderColor: C.border, padding: 6 },
+  segmentBtn:   { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 12, borderRadius: 11, borderWidth: 1, borderColor: "transparent" },
+  segmentBtnActive: { backgroundColor: C.bg3, borderColor: C.border2 },
+  segmentText:  { color: C.textMid, fontSize: 15, fontWeight: "600" },
+  segmentTextActive: { color: C.text },
   content:      { padding: 20, gap: 24, paddingBottom: 40 },
 
   pageTitle:    { color: C.text, fontSize: 28, fontWeight: "700", marginBottom: -8 },

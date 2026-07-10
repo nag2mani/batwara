@@ -8,9 +8,11 @@ import WorkCategoryIcon from "./WorkCategoryIcon";
 import WorkStatusBadge from "./WorkStatusBadge";
 import WorkDetailModal from "./WorkDetailModal";
 import { C } from "../theme/colors";
+import { useThemedStyles } from "../theme/ThemeContext";
 
 /** Compact, row-style representation of a work entry — mirrors ExpenseRow. */
 export default function WorkRow({ entry }: { entry: WorkEntry }) {
+  const s = useThemedStyles(makeStyles);
   const { data, memberById, groupById } = useStore();
   const [detailVisible, setDetailVisible] = useState(false);
 
@@ -36,7 +38,7 @@ export default function WorkRow({ entry }: { entry: WorkEntry }) {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   row:   { flexDirection: "row", alignItems: "center", paddingVertical: 12, gap: 12 },
   info:  { flex: 1, gap: 3 },
   title: { color: C.text, fontSize: 15, fontWeight: "500" },

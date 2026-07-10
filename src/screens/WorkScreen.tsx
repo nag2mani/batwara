@@ -6,6 +6,7 @@ import { useStore } from "../store/StoreContext";
 import { tallyWork, isExpired, msUntilExpiry, effortPoints } from "../lib/work";
 import { minutesToHours } from "../lib/utils";
 import { C } from "../theme/colors";
+import { useThemedStyles } from "../theme/ThemeContext";
 import WorkCard from "../components/WorkCard";
 import WorkLeaderboard from "../components/WorkLeaderboard";
 
@@ -18,6 +19,7 @@ const SEGMENTS: { key: Segment; label: string; icon: string }[] = [
 ];
 
 function StatTile({ icon, value, label, color }: { icon: string; value: string | number; label: string; color: string }) {
+  const s = useThemedStyles(makeStyles);
   return (
     <View style={s.tile}>
       <Ionicons name={icon as any} size={16} color={color} />
@@ -28,6 +30,7 @@ function StatTile({ icon, value, label, color }: { icon: string; value: string |
 }
 
 export default function WorkScreen() {
+  const s = useThemedStyles(makeStyles);
   const { data, groupById, meId, reload, refreshing } = useStore();
   const insets = useSafeAreaInsets();
   const [groupId, setGroupId] = useState<string>(data.groups[0]?.id ?? "");
@@ -218,6 +221,7 @@ export default function WorkScreen() {
 }
 
 function EmptyBlock({ icon, text, sub }: { icon: string; text: string; sub: string }) {
+  const s = useThemedStyles(makeStyles);
   return (
     <View style={s.blockEmpty}>
       <Ionicons name={icon as any} size={40} color={C.textDim} />
@@ -227,7 +231,7 @@ function EmptyBlock({ icon, text, sub }: { icon: string; text: string; sub: stri
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   safe:        { flex: 1, backgroundColor: C.bg },
   header:      { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
   title:       { color: C.text, fontSize: 24, fontWeight: "700" },

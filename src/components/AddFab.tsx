@@ -1,8 +1,10 @@
 import React from "react";
 import { TouchableOpacity, Text, StyleSheet } from "react-native";
 import { C } from "../theme/colors";
+import { useThemedStyles } from "../theme/ThemeContext";
 
 export default function AddFab({ onPress }: { onPress: () => void }) {
+  const s = useThemedStyles(makeStyles);
   return (
     <TouchableOpacity style={s.fab} onPress={onPress} activeOpacity={0.85}>
       <Text style={s.plus}>+</Text>
@@ -10,7 +12,7 @@ export default function AddFab({ onPress }: { onPress: () => void }) {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   fab: {
     position: "absolute",
     right: 20,

@@ -3,6 +3,7 @@ import { View, StyleSheet } from "react-native";
 import { Ionicons } from "./Icon";
 import type { WorkCategory } from "../lib/types";
 import { WORK_CATEGORY_META } from "../lib/types";
+import { useThemedStyles } from "../theme/ThemeContext";
 
 interface Props {
   category: WorkCategory;
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export default function WorkCategoryIcon({ category, size = 20 }: Props) {
+  const s = useThemedStyles(makeStyles);
   const meta = WORK_CATEGORY_META[category];
   const boxSize = size + 16;
   return (
@@ -19,6 +21,6 @@ export default function WorkCategoryIcon({ category, size = 20 }: Props) {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   box: { alignItems: "center", justifyContent: "center" },
 });

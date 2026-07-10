@@ -6,6 +6,7 @@ import { computeBalances, simplifyDebts, shareOf } from "../lib/splitwise";
 import { useStore } from "../store/StoreContext";
 import Avatar from "./Avatar";
 import { C } from "../theme/colors";
+import { useThemedStyles } from "../theme/ThemeContext";
 
 interface Props {
   group: Group;
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export default function GroupCard({ group, onPress }: Props) {
+  const s = useThemedStyles(makeStyles);
   const { data, memberById, meId } = useStore();
 
   const groupExpenses = data.expenses.filter(
@@ -65,7 +67,7 @@ export default function GroupCard({ group, onPress }: Props) {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   card:       { backgroundColor: C.card, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: C.border, gap: 6 },
   header:     { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 },
   emoji:      { fontSize: 28 },

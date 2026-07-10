@@ -10,6 +10,7 @@ import { WORK_CATEGORIES, WORK_CATEGORY_META, EFFORT_LEVELS, EFFORT_META } from 
 import { useStore } from "../store/StoreContext";
 import { uid, todayISO, daysAgoISO } from "../lib/utils";
 import { C } from "../theme/colors";
+import { useThemedStyles } from "../theme/ThemeContext";
 
 interface Props {
   visible: boolean;
@@ -25,6 +26,7 @@ const WHEN_OPTIONS: { label: string; iso: () => string }[] = [
 ];
 
 export default function AddWorkModal({ visible, onClose, groupId }: Props) {
+  const s = useThemedStyles(makeStyles);
   const { data, dispatch, meId } = useStore();
 
   const [title,       setTitle]       = useState("");
@@ -232,7 +234,7 @@ export default function AddWorkModal({ visible, onClose, groupId }: Props) {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   flex:         { flex: 1 },
   container:    { flex: 1, backgroundColor: C.bg, padding: 20 },
   header:       { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },

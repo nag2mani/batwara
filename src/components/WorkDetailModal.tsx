@@ -14,6 +14,7 @@ import WorkStatusBadge from "./WorkStatusBadge";
 import WorkReactionsBar from "./WorkReactionsBar";
 import Avatar from "./Avatar";
 import { C } from "../theme/colors";
+import { useThemedStyles } from "../theme/ThemeContext";
 
 interface Props {
   entry: WorkEntry | null;
@@ -31,6 +32,7 @@ function expiryLabel(ms: number): string {
 }
 
 function InfoRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
+  const s = useThemedStyles(makeStyles);
   return (
     <View style={[s.infoRow, !last && s.infoDivider]}>
       <Text style={s.infoLabel}>{label}</Text>
@@ -40,6 +42,7 @@ function InfoRow({ label, value, last }: { label: string; value: string; last?: 
 }
 
 export default function WorkDetailModal({ entry, visible, onClose }: Props) {
+  const s = useThemedStyles(makeStyles);
   const { data, memberById, groupById, dispatch, meId } = useStore();
 
   if (!entry) return null;
@@ -213,7 +216,7 @@ export default function WorkDetailModal({ entry, visible, onClose }: Props) {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container:     { flex: 1, backgroundColor: C.bg, paddingHorizontal: 20 },
   header:        { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 16 },
   title:         { color: C.text, fontSize: 20, fontWeight: "700" },

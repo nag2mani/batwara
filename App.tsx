@@ -10,9 +10,11 @@ import AppNavigator from "./src/navigation/AppNavigator";
 import AuthScreen from "./src/auth/AuthScreen";
 import { isSupabaseConfigured } from "./src/lib/supabase";
 import { C } from "./src/theme/colors";
+import { ThemeProvider, useTheme, useThemedStyles } from "./src/theme/ThemeContext";
 
 function Root() {
   const { user, loading } = useAuth();
+  const s = useThemedStyles(makeStyles);
 
   if (loading) {
     return (
@@ -35,22 +37,39 @@ function Root() {
   );
 }
 
+function Shell() {
+  const { mode } = useTheme();
+  return (
+    <>
+      <StatusBar
+        backgroundColor={C.bg}
+        barStyle={mode === "dark" ? "light-content" : "dark-content"}
+        translucent={false}
+      />
+      <AuthProvider>
+        <Root />
+      </AuthProvider>
+    </>
+  );
+}
+
 export default function App() {
   // Icons render directly from the bundled Ionicons.ttf via fontFamily
   // (see src/components/Icon.tsx), so no async font loading is needed here.
   return (
-    <GestureHandlerRootView style={s.fill}>
+    <GestureHandlerRootView style={fill}>
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-        <StatusBar backgroundColor={C.bg} barStyle="light-content" translucent={false} />
-        <AuthProvider>
-          <Root />
-        </AuthProvider>
+        <ThemeProvider>
+          <Shell />
+        </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
 
-const s = StyleSheet.create({
-  fill:    { flex: 1 },
-  loading: { flex: 1, backgroundColor: C.bg, alignItems: "center", justifyContent: "center" },
-});
+const fill = { flex: 1 } as const;
+
+const makeStyles = () =>
+  StyleSheet.create({
+    loading: { flex: 1, backgroundColor: C.bg, alignItems: "center", justifyContent: "center" },
+  });

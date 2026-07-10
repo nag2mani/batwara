@@ -13,10 +13,12 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "./AuthContext";
 import { C } from "../theme/colors";
+import { useThemedStyles } from "../theme/ThemeContext";
 
 type Mode = "signin" | "signup" | "forgot";
 
 export default function AuthScreen() {
+  const s = useThemedStyles(makeStyles);
   const { signIn, signUp, sendPasswordReset, resetPassword } = useAuth();
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail]       = useState("");
@@ -206,7 +208,7 @@ export default function AuthScreen() {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   fill:      { flex: 1 },
   container: { flexGrow: 1, justifyContent: "center", padding: 24 },
   logoWrap:  { alignItems: "center", marginBottom: 40 },

@@ -6,6 +6,7 @@ import { lendingPerspective, lendingInvolvesMe } from "../lib/lending";
 import { useStore } from "../store/StoreContext";
 import { formatMoney, todayISO, uid } from "../lib/utils";
 import { C } from "../theme/colors";
+import { useThemedStyles } from "../theme/ThemeContext";
 import Avatar from "./Avatar";
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export default function SettleUpModal({ visible, onClose, groupId }: Props) {
+  const s = useThemedStyles(makeStyles);
   const { data, dispatch, memberById, meId } = useStore();
 
   const balances = computeBalances(data.expenses, data.settlements, groupId);
@@ -126,7 +128,7 @@ export default function SettleUpModal({ visible, onClose, groupId }: Props) {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container:   { flex: 1, backgroundColor: C.bg, padding: 20 },
   header:      { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 },
   title:       { color: C.text, fontSize: 20, fontWeight: "700" },
