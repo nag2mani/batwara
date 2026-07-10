@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
-  Modal, ScrollView, Alert,
+  Modal, ScrollView, Alert, RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "../components/Icon";
@@ -12,14 +12,15 @@ import { formatMoney } from "../lib/utils";
 import GroupCard from "../components/GroupCard";
 import CreateGroupModal from "../components/CreateGroupModal";
 import AddExpenseModal from "../components/AddExpenseModal";
+import AddWorkModal from "../components/AddWorkModal";
 import SettleUpModal from "../components/SettleUpModal";
 import ExpenseRow from "../components/ExpenseRow";
+import WorkRow from "../components/WorkRow";
 import Avatar from "../components/Avatar";
-import AddFab from "../components/AddFab";
 import { C } from "../theme/colors";
 
 export default function GroupsScreen() {
-  const { data, memberById, meId, dispatch } = useStore();
+  const { data, memberById, meId, dispatch, reload, refreshing } = useStore();
 
   function confirmDeleteGroup(group: Group) {
     Alert.alert(
@@ -41,10 +42,15 @@ export default function GroupsScreen() {
   const [createVisible, setCreateVisible] = useState(false);
   const [detailGroup,   setDetailGroup]   = useState<Group | null>(null);
   const [addVisible,    setAddVisible]    = useState(false);
+  const [addWorkVisible, setAddWorkVisible] = useState(false);
   const [settleVisible, setSettleVisible] = useState(false);
 
   const detailExpenses = detailGroup
     ? data.expenses.filter((e) => e.groupId === detailGroup.id)
+    : [];
+
+  const detailWork = detailGroup
+    ? data.work.filter((w) => w.groupId === detailGroup.id)
     : [];
 
   // Your direct balance with each other member of this group.
@@ -59,6 +65,13 @@ export default function GroupsScreen() {
     <SafeAreaView style={s.safe}>
       <View style={s.header}>
         <Text style={s.title}>Groups</Text>
+        <TouchableOpacity
+          onPress={reload}
+          disabled={refreshing}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="refresh" size={22} color={refreshing ? C.textDim : C.green} />
+        </TouchableOpacity>
       </View>
 
       {data.groups.length === 0 ? (
@@ -80,6 +93,9 @@ export default function GroupsScreen() {
           numColumns={2}
           columnWrapperStyle={s.row}
           contentContainerStyle={s.list}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={reload} tintColor={C.green} colors={[C.green]} />
+          }
           renderItem={({ item }) =>
             "spacer" in item ? (
               <View style={s.cardWrap} />
@@ -92,8 +108,6 @@ export default function GroupsScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
-
-      <AddFab onPress={() => setCreateVisible(true)} />
 
       {/* Group detail modal */}
       {detailGroup && (
@@ -110,6 +124,9 @@ export default function GroupsScreen() {
                 <Text style={s.detailName}>{detailGroup.name}</Text>
               </View>
               <View style={s.detailActions}>
+                <TouchableOpacity onPress={reload} disabled={refreshing} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Ionicons name="refresh" size={22} color={refreshing ? C.textDim : C.green} />
+                </TouchableOpacity>
                 <TouchableOpacity onPress={() => confirmDeleteGroup(detailGroup)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                   <Ionicons name="trash-outline" size={22} color={C.red} />
                 </TouchableOpacity>
@@ -183,6 +200,26 @@ export default function GroupsScreen() {
                   </React.Fragment>
                 ))
               )}
+
+              {/* Work */}
+              <View style={s.sectionRow}>
+                <Text style={s.sectionLabel}>Work</Text>
+                <TouchableOpacity style={s.addExpBtn} onPress={() => setAddWorkVisible(true)}>
+                  <Ionicons name="add" size={16} color={C.green} />
+                  <Text style={s.addExpText}>Add</Text>
+                </TouchableOpacity>
+              </View>
+
+              {detailWork.length === 0 ? (
+                <Text style={s.noExpenses}>No work yet</Text>
+              ) : (
+                detailWork.map((w, i) => (
+                  <React.Fragment key={w.id}>
+                    <WorkRow entry={w} />
+                    {i < detailWork.length - 1 && <View style={s.divider} />}
+                  </React.Fragment>
+                ))
+              )}
             </ScrollView>
           </View>
 
@@ -190,6 +227,11 @@ export default function GroupsScreen() {
             visible={addVisible}
             onClose={() => setAddVisible(false)}
             defaultGroupId={detailGroup.id}
+          />
+          <AddWorkModal
+            visible={addWorkVisible}
+            onClose={() => setAddWorkVisible(false)}
+            groupId={detailGroup.id}
           />
           <SettleUpModal
             visible={settleVisible}

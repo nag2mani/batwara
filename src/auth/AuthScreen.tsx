@@ -14,17 +14,37 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "./AuthContext";
 import { C } from "../theme/colors";
 
+type Mode = "signin" | "signup" | "forgot";
+
 export default function AuthScreen() {
-  const { signIn, signUp } = useAuth();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const { signIn, signUp, sendPasswordReset, resetPassword } = useAuth();
+  const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
   const [name, setName]         = useState("");
   const [error, setError]       = useState<string | null>(null);
+  const [info, setInfo]         = useState<string | null>(null);
   const [loading, setLoading]   = useState(false);
+
+  // Password-recovery state
+  const [codeSent, setCodeSent] = useState(false);
+  const [code, setCode]         = useState("");
+
+  function switchMode(next: Mode) {
+    setMode(next);
+    setError(null);
+    setInfo(null);
+    setPassword("");
+    setCode("");
+    setCodeSent(false);
+  }
 
   async function submit() {
     setError(null);
+    setInfo(null);
+
+    if (mode === "forgot") { await submitForgot(); return; }
+
     if (!email.trim() || !password.trim()) { setError("Email and password required"); return; }
     if (mode === "signup" && !name.trim()) { setError("Name required"); return; }
     setLoading(true);
@@ -34,6 +54,49 @@ export default function AuthScreen() {
     setLoading(false);
     if (err) setError(err);
   }
+
+  async function submitForgot() {
+    if (!codeSent) {
+      // Step 1: request a code
+      if (!email.trim()) { setError("Enter your email"); return; }
+      setLoading(true);
+      const err = await sendPasswordReset(email.trim());
+      setLoading(false);
+      if (err) { setError(err); return; }
+      setCodeSent(true);
+      setInfo("We emailed you a code. Enter it below with your new password.");
+      return;
+    }
+    // Step 2: verify code + set new password
+    if (!code.trim()) { setError("Enter the code from your email"); return; }
+    if (!password.trim()) { setError("Enter a new password"); return; }
+    if (password.length < 6) { setError("Password must be at least 6 characters"); return; }
+    setLoading(true);
+    const err = await resetPassword(email.trim(), code.trim(), password);
+    setLoading(false);
+    if (err) setError(err);
+    // On success the user is signed in automatically and this screen unmounts.
+  }
+
+  async function resendCode() {
+    setError(null);
+    setInfo(null);
+    if (!email.trim()) { setError("Enter your email"); return; }
+    setLoading(true);
+    const err = await sendPasswordReset(email.trim());
+    setLoading(false);
+    if (err) { setError(err); return; }
+    setInfo("We sent a new code to your email.");
+  }
+
+  const headings: Record<Mode, string> = {
+    signin: "Welcome back",
+    signup: "Create account",
+    forgot: "Reset password",
+  };
+  const ctaLabel = mode === "signin" ? "Sign in"
+    : mode === "signup" ? "Sign up"
+    : codeSent ? "Reset password" : "Send code";
 
   return (
     <LinearGradient colors={[C.bg, C.bg2, C.bg3]} style={s.fill}>
@@ -49,7 +112,7 @@ export default function AuthScreen() {
           </View>
 
           <View style={s.card}>
-            <Text style={s.heading}>{mode === "signin" ? "Welcome back" : "Create account"}</Text>
+            <Text style={s.heading}>{headings[mode]}</Text>
 
             {mode === "signup" && (
               <TextInput
@@ -71,29 +134,69 @@ export default function AuthScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
+              editable={!(mode === "forgot" && codeSent)}
             />
 
-            <TextInput
-              style={s.input}
-              placeholder="Password"
-              placeholderTextColor={C.textDim}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-            />
+            {/* Recovery code — only in the second step of the forgot flow */}
+            {mode === "forgot" && codeSent && (
+              <TextInput
+                style={s.input}
+                placeholder="Verification code"
+                placeholderTextColor={C.textDim}
+                value={code}
+                onChangeText={setCode}
+                keyboardType="number-pad"
+                autoCapitalize="none"
+                maxLength={10}
+              />
+            )}
 
+            {/* Password field: shown for sign in / sign up, and step 2 of forgot */}
+            {(mode !== "forgot" || codeSent) && (
+              <TextInput
+                style={s.input}
+                placeholder={mode === "forgot" ? "New password" : "Password"}
+                placeholderTextColor={C.textDim}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+              />
+            )}
+
+            {info && <Text style={s.infoText}>{info}</Text>}
             {error && <Text style={s.errorText}>{error}</Text>}
 
             <TouchableOpacity style={s.btn} onPress={submit} disabled={loading} activeOpacity={0.8}>
               {loading
                 ? <ActivityIndicator color={C.bg} />
-                : <Text style={s.btnText}>{mode === "signin" ? "Sign in" : "Sign up"}</Text>
+                : <Text style={s.btnText}>{ctaLabel}</Text>
               }
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => { setMode(m => m === "signin" ? "signup" : "signin"); setError(null); }}>
+            {mode === "forgot" && codeSent && (
+              <TouchableOpacity onPress={resendCode} disabled={loading}>
+                <Text style={s.switchText}>Didn't get it? Resend code</Text>
+              </TouchableOpacity>
+            )}
+
+            {mode === "signin" && (
+              <TouchableOpacity onPress={() => switchMode("forgot")}>
+                <Text style={s.switchText}>Forgot password?</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={s.switchBtn}
+              onPress={() => switchMode(
+                mode === "signin" ? "signup"
+                : mode === "signup" ? "signin"
+                : "signin",
+              )}
+            >
               <Text style={s.switchText}>
-                {mode === "signin" ? "No account? Sign up" : "Already have an account? Sign in"}
+                {mode === "signin" ? "No account? Sign up"
+                  : mode === "signup" ? "Already have an account? Sign in"
+                  : "Back to sign in"}
               </Text>
             </TouchableOpacity>
           </View>
@@ -124,6 +227,7 @@ const s = StyleSheet.create({
     borderColor: C.border,
   },
   errorText: { color: C.red, fontSize: 13, marginBottom: 12, textAlign: "center" },
+  infoText:  { color: C.green, fontSize: 13, marginBottom: 12, textAlign: "center", lineHeight: 18 },
   btn:       {
     backgroundColor: C.green,
     borderRadius: 12,
@@ -133,5 +237,6 @@ const s = StyleSheet.create({
     marginTop: 4,
   },
   btnText:   { color: C.bg, fontWeight: "700", fontSize: 16 },
-  switchText:{ color: C.textMid, textAlign: "center", fontSize: 14 },
+  switchText:{ color: C.textMid, textAlign: "center", fontSize: 14, paddingVertical: 6 },
+  switchBtn: { marginTop: 4 },
 });

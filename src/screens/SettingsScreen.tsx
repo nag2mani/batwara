@@ -83,7 +83,7 @@ export default function SettingsScreen() {
         <View style={s.group}>
           <Text style={s.sectionHeader}>Account</Text>
           <View style={s.section}>
-            <Row icon="code-outline" label="Version" value="1.0.0" />
+            <Row icon="code-outline" label="Version" value="3.0.0" />
           </View>
           <TouchableOpacity style={s.signOutBtn} onPress={confirmSignOut} activeOpacity={0.8}>
             <Ionicons name="log-out-outline" size={20} color={C.red} />

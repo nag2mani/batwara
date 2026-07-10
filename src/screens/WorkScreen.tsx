@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal, Pressable } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal, Pressable, RefreshControl } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "../components/Icon";
 import { useStore } from "../store/StoreContext";
@@ -8,8 +8,6 @@ import { minutesToHours } from "../lib/utils";
 import { C } from "../theme/colors";
 import WorkCard from "../components/WorkCard";
 import WorkLeaderboard from "../components/WorkLeaderboard";
-import AddWorkModal from "../components/AddWorkModal";
-import AddFab from "../components/AddFab";
 
 type Segment = "feed" | "pending" | "board";
 
@@ -30,11 +28,10 @@ function StatTile({ icon, value, label, color }: { icon: string; value: string |
 }
 
 export default function WorkScreen() {
-  const { data, groupById, meId } = useStore();
+  const { data, groupById, meId, reload, refreshing } = useStore();
   const insets = useSafeAreaInsets();
   const [groupId, setGroupId] = useState<string>(data.groups[0]?.id ?? "");
   const [segment, setSegment] = useState<Segment>("feed");
-  const [addVisible, setAddVisible] = useState(false);
   const [groupMenuOpen, setGroupMenuOpen] = useState(false);
 
   // Keep a valid group selected as groups load/change.
@@ -97,12 +94,21 @@ export default function WorkScreen() {
     <SafeAreaView style={s.safe}>
       <View style={s.header}>
         <Text style={s.title}>Work</Text>
-        {awaitingMe.length > 0 && (
-          <View style={s.headerBadge}>
-            <Ionicons name="notifications" size={13} color={C.amber} />
-            <Text style={s.headerBadgeText}>{awaitingMe.length} to validate</Text>
-          </View>
-        )}
+        <View style={s.headerRight}>
+          {awaitingMe.length > 0 && (
+            <View style={s.headerBadge}>
+              <Ionicons name="notifications" size={13} color={C.amber} />
+              <Text style={s.headerBadgeText}>{awaitingMe.length} to validate</Text>
+            </View>
+          )}
+          <TouchableOpacity
+            onPress={reload}
+            disabled={refreshing}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="refresh" size={22} color={refreshing ? C.textDim : C.green} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Group dropdown */}
@@ -139,7 +145,14 @@ export default function WorkScreen() {
         </Pressable>
       </Modal>
 
-      <ScrollView style={s.scroll} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={s.scroll}
+        contentContainerStyle={s.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={reload} tintColor={C.green} colors={[C.green]} />
+        }
+      >
         {/* Dashboard */}
         <View style={s.tileRow}>
           <StatTile icon="trophy" value={dash.points} label="Points" color={C.amber} />
@@ -200,9 +213,6 @@ export default function WorkScreen() {
 
         {segment === "board" && <WorkLeaderboard groupId={activeGroupId} />}
       </ScrollView>
-
-      <AddFab onPress={() => setAddVisible(true)} />
-      <AddWorkModal visible={addVisible} onClose={() => setAddVisible(false)} groupId={activeGroupId} />
     </SafeAreaView>
   );
 }
@@ -221,6 +231,7 @@ const s = StyleSheet.create({
   safe:        { flex: 1, backgroundColor: C.bg },
   header:      { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
   title:       { color: C.text, fontSize: 24, fontWeight: "700" },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 14 },
   headerBadge: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: C.amber + "1a", borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5 },
   headerBadgeText: { color: C.amber, fontSize: 12, fontWeight: "700" },
 

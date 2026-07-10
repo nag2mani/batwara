@@ -193,8 +193,8 @@ batwara/
     │   ├── SettleUpModal.tsx
     │   └── SplitwiseImportModal.tsx
     ├── lib/
+    │   ├── lending.ts             # Loan perspective helper (lent vs borrowed, per viewer)
     │   ├── profiles.ts            # Supabase profile search
-    │   ├── seed.ts                # Sample/demo data
     │   ├── splitwise.ts           # Balances, pairwise balances, debt simplification, splits
     │   ├── splitwiseImport.ts     # Splitwise CSV parsing → expenses
     │   ├── supabase.ts            # Supabase client (conditional on env vars)

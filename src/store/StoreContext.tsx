@@ -3,7 +3,7 @@ import React, {
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type {
-  AppData, Expense, Group, Member, Settlement, WorkEntry, WorkReaction, WorkVote,
+  AppData, Expense, Group, Lending, Member, Settlement, WorkEntry, WorkReaction, WorkVote,
 } from "../lib/types";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { useAuth } from "../auth/AuthContext";
@@ -18,6 +18,9 @@ type Action =
   | { type: "ADD_GROUP";     group:      Group;  newMembers: Member[] }
   | { type: "DELETE_GROUP";  id:         string }
   | { type: "ADD_SETTLEMENT";settlement: Settlement }
+  | { type: "ADD_LENDING";   lending:    Lending }
+  | { type: "DELETE_LENDING";id:         string }
+  | { type: "SET_LENDING_SETTLED"; id:   string; settledAt: string | null }
   | { type: "ADD_WORK";      entry:      WorkEntry }
   | { type: "DELETE_WORK";   id:         string }
   | { type: "SET_VOTE";      vote:       WorkVote }                       // replaces this user's vote on this work
@@ -45,6 +48,14 @@ function reducer(state: AppData, action: Action): AppData {
       workReactions: state.workReactions.filter(r => !state.work.find(w => w.id === r.workId && w.groupId === action.id)),
     };
     case "ADD_SETTLEMENT": return { ...state, settlements: [action.settlement, ...state.settlements] };
+
+    case "ADD_LENDING":    return { ...state, lendings: [action.lending, ...state.lendings] };
+    case "DELETE_LENDING": return { ...state, lendings: state.lendings.filter(l => l.id !== action.id) };
+    case "SET_LENDING_SETTLED": return {
+      ...state,
+      lendings: state.lendings.map(l =>
+        l.id === action.id ? { ...l, settledAt: action.settledAt ?? undefined } : l),
+    };
 
     case "ADD_WORK":       return { ...state, work: [action.entry, ...state.work] };
     case "DELETE_WORK":    return {
@@ -79,6 +90,7 @@ function reducer(state: AppData, action: Action): AppData {
 function normalize(data: AppData): AppData {
   return {
     ...data,
+    lendings:      data.lendings      ?? [],
     work:          data.work          ?? [],
     workVotes:     data.workVotes     ?? [],
     workReactions: data.workReactions ?? [],
@@ -91,14 +103,16 @@ function normalize(data: AppData): AppData {
 interface StoreCtx {
   data:       AppData;
   loading:    boolean;
+  refreshing: boolean;                   // a manual/pull-to-refresh reload is in flight
   meId:       string;                    // current user's ID in the data model
   dispatch:   (action: Action) => void;
+  reload:     () => Promise<void>;       // re-fetch everything from the backend
   memberById: Map<string, Member>;
   groupById:  Map<string, Group>;
 }
 
 const Ctx = createContext<StoreCtx | null>(null);
-const EMPTY: AppData = { members: [], groups: [], expenses: [], settlements: [], work: [], workVotes: [], workReactions: [] };
+const EMPTY: AppData = { members: [], groups: [], expenses: [], settlements: [], lendings: [], work: [], workVotes: [], workReactions: [] };
 
 // ---------------------------------------------------------------------------
 // Local storage (offline / no-Supabase mode)
@@ -195,6 +209,15 @@ async function loadFromSupabase(userId: string): Promise<AppData | null> {
       ? await supabase.from("settlements").select("*").in("group_id", groupIds)
       : { data: [] };
 
+    // 5b. Lendings — claim any logged against my email before I onboarded,
+    //     then load loans where I'm the lender or the (onboarded) counterparty.
+    await supabase.rpc("claim_my_lendings");
+    const { data: lendingRows } = await supabase
+      .from("lendings")
+      .select("*")
+      .or(`created_by.eq.${userId},counterparty_id.eq.${userId}`)
+      .order("date", { ascending: false });
+
     // 6. Work ledger — entries for my groups, plus their votes & reactions
     const { data: workRows } = groupIds.length > 0
       ? await supabase.from("work_entries").select("*").in("group_id", groupIds).order("date", { ascending: false })
@@ -215,6 +238,7 @@ async function loadFromSupabase(userId: string): Promise<AppData | null> {
       groups,
       expenses,
       settlements:   (settlementRows ?? []).map(dbToSettlement),
+      lendings:      (lendingRows ?? []).map(dbToLending),
       work:          (workRows ?? []).map(dbToWork),
       workVotes:     (voteRes.data ?? []).map(dbToVote),
       workReactions: (reactionRes.data ?? []).map(dbToReaction),
@@ -242,6 +266,18 @@ function dbToSettlement(row: any): Settlement {
     amount: Number(row.amount), date: row.date, groupId: row.group_id ?? undefined,
   };
 }
+function dbToLending(row: any): Lending {
+  return {
+    id: row.id, createdBy: row.created_by,
+    direction: row.direction ?? "lent",
+    counterpartyId: row.counterparty_id ?? undefined,
+    counterpartyName: row.counterparty_name,
+    counterpartyEmail: row.counterparty_email ?? undefined,
+    amount: Number(row.amount), description: row.description ?? undefined,
+    date: row.date, createdAt: row.created_at,
+    settledAt: row.settled_at ?? undefined,
+  };
+}
 function dbToWork(row: any): WorkEntry {
   return {
     id: row.id, groupId: row.group_id, createdBy: row.created_by,
@@ -264,9 +300,42 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [data, dispatch] = useReducer(reducer, EMPTY);
   const [loading, setLoading] = React.useState(true);
+  const [refreshing, setRefreshing] = React.useState(false);
 
   // meId: which member ID represents "me" in this session
   const meId = user?.id ?? "me";
+
+  // Fetch everything for the current user from the backend into local state.
+  const fetchAll = useCallback(async () => {
+    if (!user) return;
+    let loaded: AppData | null = null;
+
+    if (isSupabaseConfigured) {
+      loaded = await loadFromSupabase(user.id);
+    } else {
+      loaded = await loadLocal(user.id);
+    }
+
+    // First login: start empty, just add self as a member
+    if (!loaded || loaded.members.length === 0) {
+      const me: Member = { id: user.id, name: user.displayName, color: "#34d399" };
+      loaded = { ...EMPTY, members: [me] };
+      if (!isSupabaseConfigured) await saveLocal(user.id, loaded);
+    }
+
+    dispatch({ type: "LOAD", data: normalize(loaded) });
+  }, [user?.id]);
+
+  // Manual refresh — re-pull from the backend (e.g. to see others' verifications).
+  const reload = useCallback(async () => {
+    if (!user) return;
+    setRefreshing(true);
+    try {
+      await fetchAll();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [user?.id, fetchAll]);
 
   useEffect(() => {
     if (!user) { dispatch({ type: "LOAD", data: EMPTY }); setLoading(false); return; }
@@ -274,22 +343,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
 
     (async () => {
-      let loaded: AppData | null = null;
-
-      if (isSupabaseConfigured) {
-        loaded = await loadFromSupabase(user.id);
-      } else {
-        loaded = await loadLocal(user.id);
-      }
-
-      // First login: start empty, just add self as a member
-      if (!loaded || loaded.members.length === 0) {
-        const me: Member = { id: user.id, name: user.displayName, color: "#34d399" };
-        loaded = { ...EMPTY, members: [me] };
-        if (!isSupabaseConfigured) await saveLocal(user.id, loaded);
-      }
-
-      if (!cancelled) { dispatch({ type: "LOAD", data: normalize(loaded) }); setLoading(false); }
+      await fetchAll();
+      if (!cancelled) setLoading(false);
     })();
 
     return () => { cancelled = true; };
@@ -367,6 +422,29 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           });
           break;
 
+        case "ADD_LENDING":
+          await supabase.from("lendings").insert({
+            id:                 action.lending.id,
+            created_by:         user.id,
+            direction:          action.lending.direction,
+            counterparty_id:    action.lending.counterpartyId ?? null,
+            counterparty_name:  action.lending.counterpartyName,
+            counterparty_email: action.lending.counterpartyEmail ?? null,
+            amount:             action.lending.amount,
+            description:        action.lending.description ?? null,
+            date:               action.lending.date,
+            settled_at:         action.lending.settledAt ?? null,
+          });
+          break;
+
+        case "DELETE_LENDING":
+          await supabase.from("lendings").delete().eq("id", action.id);
+          break;
+
+        case "SET_LENDING_SETTLED":
+          await supabase.from("lendings").update({ settled_at: action.settledAt }).eq("id", action.id);
+          break;
+
         case "ADD_WORK":
           await supabase.from("work_entries").insert({
             id:               action.entry.id,
@@ -431,7 +509,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <Ctx.Provider value={{ data, loading, meId, dispatch: wrappedDispatch, memberById, groupById }}>
+    <Ctx.Provider value={{ data, loading, refreshing, meId, dispatch: wrappedDispatch, reload, memberById, groupById }}>
       {children}
     </Ctx.Provider>
   );
