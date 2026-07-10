@@ -1,6 +1,6 @@
 # Batwara 💸
 
-**Batwara** is a personal & group expense tracker, money-lending log, and household work ledger — built with React Native (Expo). Split bills, simplify group debts, track money you lend to friends, import your Splitwise history, and log & peer-validate household chores, all in one app.
+**Batwara** is a personal & group expense tracker, money-lending log, and household work ledger. Split bills, simplify group debts, track money you lend to friends, import your Splitwise history, and log & peer-validate household chores, all in one app.
 
 <table align="center">
   <tr>
