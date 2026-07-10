@@ -81,6 +81,12 @@
 - **Pull-to-refresh** and refresh buttons to fetch the latest changes
 - Works offline in local mode (on-device storage, no account needed)
 
+### Appearance 🌗
+- **Light**, **Dark**, and **System** themes, switchable from **Settings → Appearance**
+- **System** follows your phone's OS appearance and updates live when it changes
+- The whole app recolors instantly — backgrounds, text, cards, tab bar, status bar, and every screen
+- Your choice is remembered across launches
+
 ---
 
 ## Tech Stack
@@ -123,12 +129,3 @@ Run **`supabase/setup.sql`** once in the Supabase SQL Editor — it creates ever
 ## Setup & APK Build
 
 See **[SETUP.md](./SETUP.md)** for full instructions: local development, Supabase configuration, environment variables, and both local-Gradle and EAS APK build guides.
-
----
-
-## Developer
-
-Developed with love by **Nagmani Kumar**
-
-- GitHub: [github.com/nag2mani](https://github.com/nag2mani)
-- LinkedIn: [linkedin.com/in/nag2mani](https://www.linkedin.com/in/nag2mani/)
