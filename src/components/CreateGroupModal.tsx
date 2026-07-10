@@ -11,6 +11,7 @@ import { searchProfiles, type Profile } from "../lib/profiles";
 import { isSupabaseConfigured } from "../lib/supabase";
 import { MEMBER_COLORS } from "../theme/colors";
 import { C } from "../theme/colors";
+import { useThemedStyles } from "../theme/ThemeContext";
 import type { Member } from "../lib/types";
 import Avatar from "./Avatar";
 
@@ -22,6 +23,7 @@ interface Props {
 }
 
 export default function CreateGroupModal({ visible, onClose }: Props) {
+  const s = useThemedStyles(makeStyles);
   const { data, dispatch, meId } = useStore();
   const { user } = useAuth();
 
@@ -226,7 +228,7 @@ export default function CreateGroupModal({ visible, onClose }: Props) {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container:       { flex: 1, backgroundColor: C.bg, padding: 20 },
   header:          { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
   title:           { color: C.text, fontSize: 20, fontWeight: "700" },

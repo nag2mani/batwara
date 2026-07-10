@@ -6,6 +6,7 @@ import { useStore } from "../store/StoreContext";
 import { lendingPerspective } from "../lib/lending";
 import { Ionicons } from "./Icon";
 import { C } from "../theme/colors";
+import { useThemedStyles } from "../theme/ThemeContext";
 
 interface Props {
   lending: Lending;
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export default function LendingDetailModal({ lending, visible, onClose }: Props) {
+  const s = useThemedStyles(makeStyles);
   const { dispatch, memberById, meId } = useStore();
 
   const { otherName: other, theyOweMe, iAmCreator } = lendingPerspective(lending, meId, memberById);
@@ -108,6 +110,7 @@ export default function LendingDetailModal({ lending, visible, onClose }: Props)
 }
 
 function Row({ label, value }: { label: string; value: string }) {
+  const s = useThemedStyles(makeStyles);
   return (
     <View style={s.metaRow}>
       <Text style={s.metaLabel}>{label}</Text>
@@ -116,7 +119,7 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container:   { flex: 1, backgroundColor: C.bg, padding: 20 },
   header:      { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 },
   headerTitle: { color: C.text, fontSize: 20, fontWeight: "700" },

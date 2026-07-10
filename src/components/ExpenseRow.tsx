@@ -6,6 +6,7 @@ import { useStore } from "../store/StoreContext";
 import CategoryIcon from "./CategoryIcon";
 import ExpenseDetailModal from "./ExpenseDetailModal";
 import { C } from "../theme/colors";
+import { useThemedStyles } from "../theme/ThemeContext";
 import { Ionicons } from "./Icon";
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export default function ExpenseRow({ expense }: Props) {
+  const s = useThemedStyles(makeStyles);
   const { dispatch, groupById } = useStore();
   const group = expense.groupId ? groupById.get(expense.groupId) : undefined;
   const [detailVisible, setDetailVisible] = useState(false);
@@ -55,7 +57,7 @@ export default function ExpenseRow({ expense }: Props) {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   row:    { flexDirection: "row", alignItems: "center", paddingVertical: 12, gap: 12 },
   info:   { flex: 1, gap: 3 },
   desc:   { color: C.text, fontSize: 15, fontWeight: "500" },

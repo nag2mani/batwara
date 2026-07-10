@@ -5,6 +5,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "./Icon";
 import { C } from "../theme/colors";
+import { useThemedStyles } from "../theme/ThemeContext";
 
 export type RangeKey = "7d" | "30d" | "1y" | "all" | "custom";
 
@@ -55,6 +56,7 @@ interface Props {
 }
 
 export default function DateRangePicker({ rangeKey, label, onChange }: Props) {
+  const s = useThemedStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const [menuOpen, setMenuOpen]   = useState(false);
   const [customOpen, setCustomOpen] = useState(false);
@@ -154,7 +156,7 @@ export default function DateRangePicker({ rangeKey, label, onChange }: Props) {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   trigger:        { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: C.card, borderWidth: 1, borderColor: C.border, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, maxWidth: 200 },
   triggerText:    { color: C.text, fontSize: 13, fontWeight: "600", flexShrink: 1 },
 

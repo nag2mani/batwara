@@ -10,6 +10,7 @@ import ExpenseRow from "../components/ExpenseRow";
 import WorkCard from "../components/WorkCard";
 import LendingRow from "../components/LendingRow";
 import { C } from "../theme/colors";
+import { useThemedStyles } from "../theme/ThemeContext";
 
 type Filter = "group" | "personal" | "work" | "lending";
 
@@ -21,6 +22,7 @@ const FILTERS: { key: Filter; label: string; icon: string }[] = [
 ];
 
 export default function ExpensesScreen() {
+  const s = useThemedStyles(makeStyles);
   const { data, groupById, meId, reload, refreshing } = useStore();
   const [filter, setFilter] = useState<Filter>("group");
 
@@ -134,7 +136,7 @@ export default function ExpensesScreen() {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   safe:        { flex: 1, backgroundColor: C.bg },
   header:      { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
   title:       { color: C.text, fontSize: 24, fontWeight: "700" },

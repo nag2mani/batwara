@@ -7,9 +7,11 @@ import { lendingPerspective } from "../lib/lending";
 import { Ionicons } from "./Icon";
 import LendingDetailModal from "./LendingDetailModal";
 import { C } from "../theme/colors";
+import { useThemedStyles } from "../theme/ThemeContext";
 
 /** A single loan — shown as "lent" or "borrowed" depending on the viewer. Tap to open details. */
 export default function LendingRow({ lending }: { lending: Lending }) {
+  const s = useThemedStyles(makeStyles);
   const { memberById, meId } = useStore();
   const [detailVisible, setDetailVisible] = useState(false);
 
@@ -44,7 +46,7 @@ export default function LendingRow({ lending }: { lending: Lending }) {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   row:      { flexDirection: "row", alignItems: "center", paddingVertical: 12, gap: 12 },
   iconWrap: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   info:     { flex: 1, gap: 3 },

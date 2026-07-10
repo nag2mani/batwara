@@ -18,8 +18,10 @@ import ExpenseRow from "../components/ExpenseRow";
 import WorkRow from "../components/WorkRow";
 import Avatar from "../components/Avatar";
 import { C } from "../theme/colors";
+import { useThemedStyles } from "../theme/ThemeContext";
 
 export default function GroupsScreen() {
+  const s = useThemedStyles(makeStyles);
   const { data, memberById, meId, dispatch, reload, refreshing } = useStore();
 
   function confirmDeleteGroup(group: Group) {
@@ -246,7 +248,7 @@ export default function GroupsScreen() {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   safe:            { flex: 1, backgroundColor: C.bg },
   header:          { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
   title:           { color: C.text, fontSize: 24, fontWeight: "700" },

@@ -9,6 +9,7 @@ import { minutesToHours } from "../lib/utils";
 import Avatar from "./Avatar";
 import WorkCard from "./WorkCard";
 import { C } from "../theme/colors";
+import { useThemedStyles } from "../theme/ThemeContext";
 
 interface Props {
   memberId: string | null;
@@ -18,6 +19,7 @@ interface Props {
 }
 
 function Stat({ value, label, color }: { value: string | number; label: string; color?: string }) {
+  const s = useThemedStyles(makeStyles);
   return (
     <View style={s.stat}>
       <Text style={[s.statValue, color && { color }]}>{value}</Text>
@@ -27,6 +29,7 @@ function Stat({ value, label, color }: { value: string | number; label: string; 
 }
 
 export default function UserContributionModal({ memberId, groupId, visible, onClose }: Props) {
+  const s = useThemedStyles(makeStyles);
   const { data, memberById, groupById } = useStore();
 
   if (!memberId) return null;
@@ -112,7 +115,7 @@ export default function UserContributionModal({ memberId, groupId, visible, onCl
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container:    { flex: 1, backgroundColor: C.bg, paddingHorizontal: 20 },
   header:       { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 16 },
   title:        { color: C.text, fontSize: 20, fontWeight: "700" },

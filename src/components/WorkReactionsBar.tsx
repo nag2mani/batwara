@@ -4,8 +4,10 @@ import { REACTION_EMOJIS, type ReactionEmoji } from "../lib/types";
 import { useStore } from "../store/StoreContext";
 import { uid, todayISO } from "../lib/utils";
 import { C } from "../theme/colors";
+import { useThemedStyles } from "../theme/ThemeContext";
 
 export default function WorkReactionsBar({ workId }: { workId: string }) {
+  const s = useThemedStyles(makeStyles);
   const { data, dispatch, meId } = useStore();
   const reactions = data.workReactions.filter((r) => r.workId === workId);
 
@@ -42,7 +44,7 @@ export default function WorkReactionsBar({ workId }: { workId: string }) {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   row:        { flexDirection: "row", gap: 8, flexWrap: "wrap" },
   pill:       { flexDirection: "row", alignItems: "center", gap: 5, borderRadius: 16, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: C.border, backgroundColor: C.bg2 },
   pillActive: { borderColor: C.green, backgroundColor: C.green + "1a" },

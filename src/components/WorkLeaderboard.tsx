@@ -9,6 +9,7 @@ import { minutesToHours } from "../lib/utils";
 import Avatar from "./Avatar";
 import UserContributionModal from "./UserContributionModal";
 import { C } from "../theme/colors";
+import { useThemedStyles } from "../theme/ThemeContext";
 
 const RANGES: { key: LeaderboardRange; label: string }[] = [
   { key: "week",  label: "Weekly" },
@@ -19,6 +20,7 @@ const RANGES: { key: LeaderboardRange; label: string }[] = [
 const MEDALS = ["🥇", "🥈", "🥉"];
 
 export default function WorkLeaderboard({ groupId }: { groupId: string }) {
+  const s = useThemedStyles(makeStyles);
   const { data, memberById, groupById } = useStore();
   const [range, setRange]     = useState<LeaderboardRange>("week");
   const [profileId, setProfileId] = useState<string | null>(null);
@@ -87,7 +89,7 @@ export default function WorkLeaderboard({ groupId }: { groupId: string }) {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   wrap:        { gap: 10 },
   segment:     { flexDirection: "row", backgroundColor: C.card, borderRadius: 12, padding: 4, borderWidth: 1, borderColor: C.border },
   segBtn:      { flex: 1, paddingVertical: 9, borderRadius: 9, alignItems: "center" },

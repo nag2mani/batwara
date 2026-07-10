@@ -22,10 +22,12 @@ import CategoryBreakdownModal from "../components/CategoryBreakdownModal";
 import AddFab from "../components/AddFab";
 import DateRangePicker, { computeRange, type RangeKey, type DateRange } from "../components/DateRangePicker";
 import { C } from "../theme/colors";
+import { useThemedStyles } from "../theme/ThemeContext";
 
 const { width } = Dimensions.get("window");
 
 export default function DashboardScreen() {
+  const s = useThemedStyles(makeStyles);
   const { data, memberById, meId } = useStore();
   const [settleVisible,  setSettleVisible]  = useState(false);
   const [chooserVisible, setChooserVisible] = useState(false);
@@ -328,7 +330,7 @@ export default function DashboardScreen() {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   safe:        { flex: 1, backgroundColor: C.bg },
   flex:        { flex: 1 },
   scroll:      { flex: 1 },

@@ -8,6 +8,7 @@ import type { Category } from "../lib/types";
 import CategoryIcon from "./CategoryIcon";
 import { formatMoney } from "../lib/utils";
 import { C } from "../theme/colors";
+import { useThemedStyles } from "../theme/ThemeContext";
 
 export interface CategoryRow {
   name: string;
@@ -25,6 +26,7 @@ interface Props {
 }
 
 export default function CategoryBreakdownModal({ visible, onClose, rows, total, rangeLabel }: Props) {
+  const s = useThemedStyles(makeStyles);
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <SafeAreaView style={s.container} edges={["top", "bottom"]}>
@@ -70,7 +72,7 @@ export default function CategoryBreakdownModal({ visible, onClose, rows, total, 
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg, paddingHorizontal: 20 },
   header:    { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 16 },
   title:     { color: C.text, fontSize: 20, fontWeight: "700" },

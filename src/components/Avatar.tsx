@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { initials } from "../lib/utils";
 import { C } from "../theme/colors";
+import { useThemedStyles } from "../theme/ThemeContext";
 
 interface Props {
   name: string;
@@ -13,6 +14,7 @@ const SIZES = { sm: 28, md: 36, lg: 48 };
 const FONT  = { sm: 11, md: 14, lg: 18 };
 
 export default function Avatar({ name, color, size = "md" }: Props) {
+  const s = useThemedStyles(makeStyles);
   const dim = SIZES[size];
   return (
     <View style={[s.circle, { width: dim, height: dim, borderRadius: dim / 2, backgroundColor: color + "26" }]}>
@@ -21,7 +23,7 @@ export default function Avatar({ name, color, size = "md" }: Props) {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   circle: { alignItems: "center", justifyContent: "center" },
   text:   { fontWeight: "700" },
 });

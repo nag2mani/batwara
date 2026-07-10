@@ -9,6 +9,7 @@ import { formatDateLong, formatMoney } from "../lib/utils";
 import { useStore } from "../store/StoreContext";
 import CategoryIcon from "./CategoryIcon";
 import { C } from "../theme/colors";
+import { useThemedStyles } from "../theme/ThemeContext";
 
 interface Props {
   expense: Expense | null;
@@ -21,6 +22,7 @@ function cap(s: string) {
 }
 
 function InfoRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
+  const s = useThemedStyles(makeStyles);
   return (
     <View style={[s.infoRow, !last && s.infoDivider]}>
       <Text style={s.infoLabel}>{label}</Text>
@@ -30,6 +32,7 @@ function InfoRow({ label, value, last }: { label: string; value: string; last?: 
 }
 
 export default function ExpenseDetailModal({ expense, visible, onClose }: Props) {
+  const s = useThemedStyles(makeStyles);
   const { memberById, groupById, dispatch } = useStore();
 
   if (!expense) return null;
@@ -119,7 +122,7 @@ export default function ExpenseDetailModal({ expense, visible, onClose }: Props)
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container:    { flex: 1, backgroundColor: C.bg, paddingHorizontal: 20 },
   header:       { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 16 },
   title:        { color: C.text, fontSize: 20, fontWeight: "700" },

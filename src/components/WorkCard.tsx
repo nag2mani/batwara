@@ -11,6 +11,7 @@ import WorkStatusBadge from "./WorkStatusBadge";
 import WorkReactionsBar from "./WorkReactionsBar";
 import WorkDetailModal from "./WorkDetailModal";
 import { C } from "../theme/colors";
+import { useThemedStyles } from "../theme/ThemeContext";
 
 interface Props {
   entry: WorkEntry;
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export default function WorkCard({ entry, showReactions }: Props) {
+  const s = useThemedStyles(makeStyles);
   const { data, memberById, groupById } = useStore();
   const [open, setOpen] = useState(false);
 
@@ -75,7 +77,7 @@ export default function WorkCard({ entry, showReactions }: Props) {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   card:      { backgroundColor: C.card, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: C.border, gap: 12 },
   top:       { flexDirection: "row", alignItems: "center", gap: 12 },
   info:      { flex: 1, gap: 3 },

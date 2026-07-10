@@ -9,6 +9,7 @@ import { useStore } from "../store/StoreContext";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { uid, todayISO } from "../lib/utils";
 import { C } from "../theme/colors";
+import { useThemedStyles } from "../theme/ThemeContext";
 
 interface Props {
   visible: boolean;
@@ -22,6 +23,7 @@ interface PersonResult {
 }
 
 export default function AddLendingModal({ visible, onClose }: Props) {
+  const s = useThemedStyles(makeStyles);
   const { data, dispatch, meId } = useStore();
 
   const [direction,   setDirection]   = useState<LendingDirection>("lent");
@@ -257,7 +259,7 @@ export default function AddLendingModal({ visible, onClose }: Props) {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   flex:         { flex: 1 },
   container:    { flex: 1, backgroundColor: C.bg, padding: 20 },
   header:       { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },

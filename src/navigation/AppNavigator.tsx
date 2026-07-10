@@ -7,10 +7,13 @@ import WorkScreen from "../screens/WorkScreen";
 import GroupsScreen from "../screens/GroupsScreen";
 import SettingsScreen from "../screens/SettingsScreen";
 import { C } from "../theme/colors";
+import { useTheme } from "../theme/ThemeContext";
 
 const Tab = createBottomTabNavigator();
 
 export default function AppNavigator() {
+  // Subscribe to theme changes so the tab bar (inline C.xxx) re-renders on toggle.
+  useTheme();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({

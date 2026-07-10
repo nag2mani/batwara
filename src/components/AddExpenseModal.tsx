@@ -10,6 +10,7 @@ import { resolveSplits, validateSplits } from "../lib/splitwise";
 import { useStore } from "../store/StoreContext";
 import { uid, todayISO } from "../lib/utils";
 import { C } from "../theme/colors";
+import { useThemedStyles } from "../theme/ThemeContext";
 
 interface Props {
   visible: boolean;
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export default function AddExpenseModal({ visible, onClose, defaultGroupId }: Props) {
+  const s = useThemedStyles(makeStyles);
   const { data, dispatch, meId } = useStore();
 
   const [description, setDescription] = useState("");
@@ -254,7 +256,7 @@ export default function AddExpenseModal({ visible, onClose, defaultGroupId }: Pr
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   flex:            { flex: 1 },
   container:       { flex: 1, backgroundColor: C.bg, padding: 20 },
   header:          { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
