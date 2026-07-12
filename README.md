@@ -130,9 +130,3 @@ Run **`supabase/setup.sql`** once in the Supabase SQL Editor — it creates ever
 | `work_entries` | Logged household chores |
 | `work_votes` | Approve / reject validations on work entries |
 | `work_reactions` | Emoji reactions on work entries |
-
----
-
-## Setup & APK Build
-
-See **[SETUP.md](./SETUP.md)** for full instructions: local development, Supabase configuration, environment variables, and both local-Gradle and EAS APK build guides.
